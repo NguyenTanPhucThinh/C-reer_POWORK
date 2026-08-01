@@ -39,7 +39,6 @@ app.use('/api/v1/assessment', assessmentRoutes)
 app.use('/api/v1/profiles', profileRoutes)
 app.use('/api/v1/talent-pool', talentPoolRoutes)
 
-
 // ─── Error Handling ───────────────────────────────────────────────────────────
 app.use(notFoundHandler)
 app.use(errorHandler)

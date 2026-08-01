@@ -52,8 +52,8 @@ export const googleStrategy = new GoogleStrategy(
           data: {
             email,
             fullName,
-            passwordHash: null,   // Google user không có password
-            role: 'Candidate',   
+            passwordHash: null, // Google user không có password
+            role: 'Candidate',
             googleId,
           },
         })
@@ -63,5 +63,5 @@ export const googleStrategy = new GoogleStrategy(
     } catch (err) {
       return done(err, null)
     }
-  }
+  },
 )

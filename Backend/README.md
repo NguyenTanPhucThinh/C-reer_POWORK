@@ -67,9 +67,9 @@ powork-backend/
 │   │   │   └── talent-pool.controller.js ← addToTalentPool, getTalentPool
 │   │   ├── routes/
 │   │   │   └── talent-pool.routes.js     ← /api/v1/talent-pool
-│   │   ├── services/                     
-│   │   ├── repositories/                 
-│   │   └── models/                       
+│   │   ├── services/
+│   │   ├── repositories/
+│   │   └── models/
 │   │
 │   ├── shared/                          ← Code dùng chung — KHÔNG chứa logic nghiệp vụ
 │   │   ├── config/
@@ -451,14 +451,13 @@ brew services stop postgresql
 > FE (Khoa) có thể gọi ngay sau khi `npm run dev` chạy thành công.  
 > **Tất cả field trong request/response dùng `snake_case`.**
 
-| Module | Prefix |
-|--------|--------|
-| IAM | `/api/v1/auth` |
-| Challenge | `/api/v1/challenges` |
-| Assessment | `/api/v1/assessment` |
-| Profile | `/api/v1/profiles` |
+| Module      | Prefix                |
+| ----------- | --------------------- |
+| IAM         | `/api/v1/auth`        |
+| Challenge   | `/api/v1/challenges`  |
+| Assessment  | `/api/v1/assessment`  |
+| Profile     | `/api/v1/profiles`    |
 | Talent Pool | `/api/v1/talent-pool` |
-
 
 ---
 
@@ -566,17 +565,17 @@ brew services stop postgresql
 | ------ | --------------------------- | ----------------------------------------------------------- |
 | GET    | `/api/v1/profiles/:user_id` | Xem Dynamic Profile công khai của ứng viên (không cần auth) |
 
-
 ---
 
 ### Talent Pool Module — `/api/v1/talent-pool`
 
-| Method | Endpoint | Body | Auth | Mô tả |
-|--------|----------|------|------|-------|
-| POST | `/api/v1/talent-pool` | `{user_id}` | EMPLOYER | Thêm ứng viên đã unlock vào danh sách theo dõi |
-| GET | `/api/v1/talent-pool` | — | EMPLOYER | Xem danh sách ứng viên trong Talent Pool |
+| Method | Endpoint              | Body        | Auth     | Mô tả                                          |
+| ------ | --------------------- | ----------- | -------- | ---------------------------------------------- |
+| POST   | `/api/v1/talent-pool` | `{user_id}` | EMPLOYER | Thêm ứng viên đã unlock vào danh sách theo dõi |
+| GET    | `/api/v1/talent-pool` | —           | EMPLOYER | Xem danh sách ứng viên trong Talent Pool       |
 
 **Response mẫu — GET /talent-pool:**
+
 ```json
 {
   "status": "success",

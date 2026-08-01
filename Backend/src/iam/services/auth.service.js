@@ -24,7 +24,7 @@ export const signTokenForUser = (user, company = null) => {
       companyId: company?.id ?? null,
     },
     config.jwt.secret,
-    { expiresIn: config.jwt.expiresIn }
+    { expiresIn: config.jwt.expiresIn },
   )
 }
 
@@ -56,9 +56,7 @@ export const register = async ({ email, password, fullName, role, companyName })
       passwordHash,
       fullName,
       role,
-      ...(role === 'Employer' && companyName
-        ? { company: { create: { companyName } } }
-        : {}),
+      ...(role === 'Employer' && companyName ? { company: { create: { companyName } } } : {}),
     },
     include: { company: true },
   })
@@ -90,7 +88,7 @@ export const login = async ({ email, password }) => {
     throw new AppError(
       'Tài khoản này được đăng ký qua Google. Vui lòng đăng nhập bằng Google.',
       400,
-      'AUTH_010'
+      'AUTH_010',
     )
   }
 

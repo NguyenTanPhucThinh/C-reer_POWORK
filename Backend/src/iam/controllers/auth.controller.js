@@ -45,6 +45,6 @@ export const googleCallback = async (req, res) => {
   // 💡 SỬA: Đổi access_token thành accessToken cho đúng chuẩn camelCase
   const accessToken = authService.signTokenForUser(user, company)
 
-  // Redirect về FE kèm token 
+  // Redirect về FE kèm token
   return res.redirect(`${config.clientUrl}/auth/callback?token=${accessToken}&role=${user.role}`)
 }

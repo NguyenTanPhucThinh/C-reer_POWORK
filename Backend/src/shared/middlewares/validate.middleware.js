@@ -1,7 +1,7 @@
 /**
  * Shared Middleware — Validate Middleware
  * Dùng chung cho mọi domain để kiểm tra tính hợp lệ của dữ liệu bằng Zod Schema.
- * Nếu dữ liệu sai, schema.parse() sẽ ném ra ZodError. 
+ * Nếu dữ liệu sai, schema.parse() sẽ ném ra ZodError.
  * Lỗi này sẽ được error.middleware.js tự động bắt và trả về mã 400 kèm danh sách field bị lỗi.
  */
 
