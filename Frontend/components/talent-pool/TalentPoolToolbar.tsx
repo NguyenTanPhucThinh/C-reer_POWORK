@@ -27,8 +27,8 @@ export function TalentPoolToolbar({
 }: TalentPoolToolbarProps) {
   const tabs: { key: FilterTabOption; label: string; count: number }[] = [
     { key: 'ALL', label: 'Tất cả', count: totalCount },
-    { key: 'IN_POOL', label: 'In Pool', count: inPoolCount },
-    { key: 'INVITED', label: 'Invited', count: invitedCount },
+    { key: 'IN_POOL', label: 'Trong Pool', count: inPoolCount },
+    { key: 'INVITED', label: 'Đã mời', count: invitedCount },
   ];
 
   return (

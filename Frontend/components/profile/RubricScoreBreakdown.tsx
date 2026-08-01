@@ -8,7 +8,7 @@ export function RubricScoreBreakdown({ items }: RubricScoreBreakdownProps) {
   if (items.length === 0) {
     return (
       <div className="rounded-lg border-hairline border-border-secondary bg-background p-4 text-sm text-foreground-secondary">
-        Chưa có rubric breakdown cho evidence này.
+        Chưa có chi tiết rubric cho bằng chứng này.
       </div>
     );
   }
@@ -25,7 +25,7 @@ export function RubricScoreBreakdown({ items }: RubricScoreBreakdownProps) {
             <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
               <div>
                 <h3 className="text-sm font-semibold text-foreground">{item.criterionName}</h3>
-                <p className="mt-1 text-2xs text-foreground-tertiary">Weight {item.weight}%</p>
+                <p className="mt-1 text-2xs text-foreground-tertiary">Trọng số {item.weight}%</p>
               </div>
               <p className="font-mono text-sm text-accent">
                 {item.score}/{item.maxScore}

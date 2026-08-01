@@ -109,17 +109,19 @@ export default function CreateChallengePage() {
       } else {
         // This block might not be reached if interceptor handles errors.
         // But it's good to have a fallback.
-        setError(response.data?.message || 'Failed to create challenge.');
+        setError(response.data?.message || 'Không thể tạo challenge. Vui lòng thử lại.');
         console.error('Failed to create challenge:', response.data);
       }
     } catch (err: unknown) {
       // Catch AxiosError
       if (err instanceof AxiosError) {
-        setError(err.response?.data?.message || 'An error occurred during challenge creation.');
+        setError(
+          err.response?.data?.message || 'Đã xảy ra lỗi khi tạo challenge. Vui lòng thử lại.'
+        );
         console.error('Axios error during challenge creation:', err.response?.data);
       } else {
-        setError('An unexpected error occurred.');
-        console.error('An unexpected error occurred:', err);
+        setError('Đã xảy ra lỗi không mong đợi. Vui lòng thử lại sau.');
+        console.error('Lỗi không mong đợi:', err);
       }
     } finally {
       setIsLoading(false);
@@ -175,7 +177,7 @@ export default function CreateChallengePage() {
               style={styles.input}
               value={industry}
               onChange={(e) => setIndustry(e.target.value)}
-              placeholder="e.g., Backend, System Design"
+              placeholder="ví dụ: Backend, System Design"
             />
           </div>
 

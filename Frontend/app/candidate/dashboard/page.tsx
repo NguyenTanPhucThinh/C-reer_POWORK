@@ -95,7 +95,9 @@ export default function DashboardPage() {
 
           <div>
             <h2 className="mb-3 text-lg font-semibold text-foreground">Hoạt động gần đây</h2>
-            <div className="card text-sm text-foreground-secondary">Chưa có hoạt động gần đây.</div>
+            <div className="card text-sm text-foreground-secondary">
+              Bạn chưa có hoạt động nào. Hãy bắt đầu bằng cách chinh phục challenge đầu tiên!
+            </div>
           </div>
         </aside>
       </section>

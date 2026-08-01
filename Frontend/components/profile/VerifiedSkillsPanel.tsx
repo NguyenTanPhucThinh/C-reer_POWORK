@@ -13,7 +13,7 @@ export function VerifiedSkillsPanel({ skills }: VerifiedSkillsPanelProps) {
           <p className="mb-2 text-2xs font-semibold uppercase tracking-[0.18em] text-accent">
             Capability signals
           </p>
-          <h2 className="text-2xl font-semibold text-foreground">Verified Skills</h2>
+          <h2 className="text-2xl font-semibold text-foreground">Kỹ năng đã xác thực</h2>
         </div>
         <p className="max-w-sm text-sm leading-6 text-foreground-tertiary">
           Skill, score, and level backed by challenge rubrics.
@@ -27,7 +27,7 @@ export function VerifiedSkillsPanel({ skills }: VerifiedSkillsPanelProps) {
           ))}
         </div>
       ) : (
-        <p className="text-sm text-foreground-secondary">No verified skills yet.</p>
+        <p className="text-sm text-foreground-secondary">Chưa có kỹ năng nào được xác thực.</p>
       )}
     </section>
   );

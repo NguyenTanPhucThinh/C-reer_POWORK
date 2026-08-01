@@ -161,7 +161,7 @@ function WorkspaceSettingsPanel() {
           {section === 'profile' && (
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="text-sm text-foreground-secondary">
-                Workspace name
+                Tên workspace
                 <input
                   value={settings.workspaceName}
                   onChange={(event) => updateSettings({ workspaceName: event.target.value })}
@@ -169,7 +169,7 @@ function WorkspaceSettingsPanel() {
                 />
               </label>
               <label className="text-sm text-foreground-secondary">
-                Company name
+                Tên công ty
                 <input
                   value={settings.companyName}
                   onChange={(event) => updateSettings({ companyName: event.target.value })}
@@ -185,7 +185,7 @@ function WorkspaceSettingsPanel() {
                   type="email"
                   value={memberEmail}
                   onChange={(event) => setMemberEmail(event.target.value)}
-                  placeholder="member@company.com"
+                  placeholder="thanhvien@congty.com"
                   className="h-10 min-w-0 flex-1 rounded-lg border border-border-secondary bg-input px-3 text-foreground outline-none focus:ring-2 focus:ring-focus"
                 />
                 <button
@@ -228,7 +228,7 @@ function WorkspaceSettingsPanel() {
           {section === 'notifications' && (
             <div className="space-y-3">
               <SettingToggle
-                label="Email notifications"
+                label="Thông báo qua email"
                 checked={settings.emailNotifications}
                 onChange={(checked) => updateSettings({ emailNotifications: checked })}
               />
@@ -241,7 +241,7 @@ function WorkspaceSettingsPanel() {
           )}
           {section === 'appearance' && (
             <fieldset>
-              <legend className="mb-2 text-sm font-medium text-foreground">Theme</legend>
+              <legend className="mb-2 text-sm font-medium text-foreground">Giao diện</legend>
               <div className="flex gap-2">
                 {(['dark', 'light'] as const).map((theme) => (
                   <button
@@ -488,7 +488,7 @@ export function EmployerOverview({ user }: { user: User }) {
                       aria-label={
                         bookmarkIds.includes(challenge.challenge_id)
                           ? `Xóa bookmark ${challenge.title}`
-                          : `Bookmark ${challenge.title}`
+                          : `Đã lưu ${challenge.title}`
                       }
                       className="text-sm text-foreground-secondary hover:text-accent"
                     >

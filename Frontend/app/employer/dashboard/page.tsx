@@ -191,7 +191,9 @@ export default function EmployerDashboardPage() {
 
           <div>
             <h3 className="mb-3 text-lg font-semibold text-foreground">Hoạt động gần đây</h3>
-            <div className="card text-sm text-foreground-secondary">Chưa có hoạt động gần đây.</div>
+            <div className="card text-sm text-foreground-secondary">
+              Chưa có hoạt động. Tạo challenge đầu tiên để bắt đầu nhận bài nộp từ ứng viên.
+            </div>
           </div>
         </aside>
       </section>

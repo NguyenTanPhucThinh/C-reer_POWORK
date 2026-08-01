@@ -19,7 +19,7 @@ export function TalentPoolStats({
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold text-foreground">Thống kê</h2>
         <span className="inline-flex items-center rounded-full bg-accent-bg px-2 py-0.5 text-2xs font-semibold text-accent">
-          Realtime
+          Thời gian thực
         </span>
       </div>
 

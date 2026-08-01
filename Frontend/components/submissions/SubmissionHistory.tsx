@@ -116,7 +116,7 @@ export function SubmissionHistory({
     <section className={cn('flex min-h-0 flex-1 flex-col', className)}>
       <div className="mb-4 flex shrink-0 flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <span className="sec-label mb-0">Timeline</span>
+          <span className="sec-label mb-0">Dòng thời gian</span>
           <h2 className="text-2xl font-semibold text-foreground">Lịch sử nộp bài</h2>
         </div>
         <span className="text-xs text-foreground-secondary">

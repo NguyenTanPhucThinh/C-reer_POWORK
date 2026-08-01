@@ -21,9 +21,9 @@ function getJoinedDate(profile: CandidateProfile) {
     (left, right) => new Date(left.completedAt).getTime() - new Date(right.completedAt).getTime()
   )[0];
 
-  if (!firstEvidence) return 'Joined POWORK';
+  if (!firstEvidence) return 'Tham gia POWORK';
 
-  return `Joined ${new Intl.DateTimeFormat('en', {
+  return `Tham gia ${new Intl.DateTimeFormat('vi-VN', {
     month: 'short',
     year: 'numeric',
   }).format(new Date(firstEvidence.completedAt))}`;
@@ -49,14 +49,14 @@ export function ProfileHeader({ profile, isOwner = false, onShare }: ProfileHead
                   {profile.fullName}
                 </h1>
                 <span className="rounded-pill border-hairline border-success bg-success-bg px-2.5 py-1 text-xs font-medium text-success">
-                  Verified
+                  Đã xác thực
                 </span>
               </div>
 
               <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-foreground-secondary">
                 <span>{getUsername(profile.fullName)}</span>
                 <span className="h-1 w-1 rounded-full bg-foreground-tertiary" />
-                <span>{profile.headline ?? 'Verified professional'}</span>
+                <span>{profile.headline ?? 'Chuyên gia được xác thực'}</span>
               </div>
 
               {profile.bio && (
@@ -68,8 +68,8 @@ export function ProfileHeader({ profile, isOwner = false, onShare }: ProfileHead
               <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-foreground-secondary">
                 {profile.location && <span>{profile.location}</span>}
                 <span>{getJoinedDate(profile)}</span>
-                <span>Open to interview</span>
-                <span>{profile.totalChallenges} verified proofs</span>
+                <span>Sẵn sàng phỏng vấn</span>
+                <span>{profile.totalChallenges} bằng chứng đã xác thực</span>
               </div>
             </div>
           </div>
@@ -77,7 +77,7 @@ export function ProfileHeader({ profile, isOwner = false, onShare }: ProfileHead
           <div className="flex shrink-0 flex-wrap gap-2 md:justify-end">
             {isOwner && (
               <Button variant="default" size="sm" className="h-9 rounded-pill px-4 text-xs">
-                Edit Profile
+                Chỉnh sửa hồ sơ
               </Button>
             )}
             <Button
@@ -86,7 +86,7 @@ export function ProfileHeader({ profile, isOwner = false, onShare }: ProfileHead
               className="h-9 rounded-pill px-4 text-xs hover:border-accent"
               onClick={onShare}
             >
-              Share Profile
+              Chia sẻ hồ sơ
             </Button>
           </div>
         </div>
@@ -103,7 +103,7 @@ export function ProfileHeader({ profile, isOwner = false, onShare }: ProfileHead
         </div>
 
         <div className="flex flex-wrap gap-2 md:justify-end">
-          {['Portfolio', 'GitHub', 'Website', 'Contact'].map((label) => (
+          {['Hồ sơ', 'GitHub', 'Website', 'Liên hệ'].map((label) => (
             <button
               key={label}
               type="button"
