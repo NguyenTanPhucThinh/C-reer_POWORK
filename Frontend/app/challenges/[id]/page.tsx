@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
-import Link from 'next/link';
-import apiClient from '@/lib/api/client';
+import _Link from 'next/link';
+import _apiClient from '@/lib/api/client';
 import { challengeAPI } from '@/lib/api/endpoints';
 import { Challenge } from '@/lib/types/challenge';
 import { DashboardShell } from '@/components/layout/DashboardShell';

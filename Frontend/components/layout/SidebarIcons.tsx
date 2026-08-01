@@ -166,6 +166,121 @@ export function BrandIcon(props: IconProps) {
   );
 }
 
+export function MailIcon(props: IconProps) {
+  return (
+    <svg {...iconProps} {...props}>
+      <rect x="3.5" y="5.5" width="17" height="13" rx="2" />
+      <path d="m4 7 8 5.5L20 7" />
+    </svg>
+  );
+}
+
+export function InboxIcon(props: IconProps) {
+  return (
+    <svg {...iconProps} {...props}>
+      <path d="M4 13.5h4l1.5 2.5h5L16 13.5h4" />
+      <path d="M4 13.5 6 5.5h12l2 8V18a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-4.5Z" />
+    </svg>
+  );
+}
+
+export function TrophyIcon(props: IconProps) {
+  return (
+    <svg {...iconProps} {...props}>
+      <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+      <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+      <path d="M4 21h16" />
+      <path d="M10 15v2.5c0 .8-.7 1.2-1.3 1.5C7.4 19.6 7 20.4 7 21" />
+      <path d="M14 15v2.5c0 .8.7 1.2 1.3 1.5.9.6 1.7 1.4 1.7 2" />
+      <path d="M18 3.5H6V9a6 6 0 0 0 12 0V3.5Z" />
+    </svg>
+  );
+}
+
+export function RefreshIcon(props: IconProps) {
+  return (
+    <svg {...iconProps} {...props}>
+      <path d="M20 11.5a8 8 0 0 0-13.6-4.3L4 9.5" />
+      <path d="M4 4.5v5h5" />
+      <path d="M4 12.5a8 8 0 0 0 13.6 4.3L20 14.5" />
+      <path d="M20 19.5v-5h-5" />
+    </svg>
+  );
+}
+
+export function RocketIcon(props: IconProps) {
+  return (
+    <svg {...iconProps} {...props}>
+      <path d="M12 3.5c3.5 1.5 5.5 4.8 5.5 9L14 16H10L6.5 12.5c0-4.2 2-7.5 5.5-9Z" />
+      <circle cx="12" cy="9.5" r="1.8" />
+      <path d="M10 16c-2 .6-3 2-3 4.5 2.5 0 3.9-1 4.5-3" />
+      <path d="M14 16c2 .6 3 2 3 4.5-2.5 0-3.9-1-4.5-3" />
+    </svg>
+  );
+}
+
+export function ChartIcon(props: IconProps) {
+  return (
+    <svg {...iconProps} {...props}>
+      <path d="M4 4v16h16" />
+      <path d="M8 16v-4" />
+      <path d="M12.5 16V8" />
+      <path d="M17 16v-6" />
+    </svg>
+  );
+}
+
+export function UsersIcon(props: IconProps) {
+  return (
+    <svg {...iconProps} {...props}>
+      <path d="M16 20v-1.5a4 4 0 0 0-4-4H6.5a4 4 0 0 0-4 4V20" />
+      <circle cx="9.2" cy="7.5" r="3.5" />
+      <path d="M21.5 20v-1.5a4 4 0 0 0-3-3.85" />
+      <path d="M15.5 4.15a4 4 0 0 1 0 7.7" />
+    </svg>
+  );
+}
+
+export function ClipboardIcon(props: IconProps) {
+  return (
+    <svg {...iconProps} {...props}>
+      <rect x="5" y="4.5" width="14" height="16" rx="2" />
+      <path d="M9 4.5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 4.5v1.5H9V4.5Z" />
+      <path d="M9 11h6" />
+      <path d="M9 14.5h4" />
+    </svg>
+  );
+}
+
+export function TargetIcon(props: IconProps) {
+  return (
+    <svg {...iconProps} {...props}>
+      <circle cx="12" cy="12" r="8" />
+      <circle cx="12" cy="12" r="4.5" />
+      <circle cx="12" cy="12" r="1" />
+    </svg>
+  );
+}
+
+export function ZapIcon(props: IconProps) {
+  return (
+    <svg {...iconProps} {...props}>
+      <path d="M13 3 5 13.5h6L10 21l8-10.5h-6L13 3Z" />
+    </svg>
+  );
+}
+
+export function RepeatIcon(props: IconProps) {
+  return (
+    <svg {...iconProps} {...props}>
+      <path d="m17 3 3 3-3 3" />
+      <path d="M4 12V9.5A3.5 3.5 0 0 1 7.5 6H20" />
+      <path d="m7 21-3-3 3-3" />
+      <path d="M20 12v2.5A3.5 3.5 0 0 1 16.5 18H4" />
+    </svg>
+  );
+}
+
 const icons: Record<NavIconName, (props: IconProps) => ReactElement> = {
   home: HomeIcon,
   challenge: ChallengeIcon,

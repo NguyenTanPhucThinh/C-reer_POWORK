@@ -1,4 +1,4 @@
-import { Avatar, Button } from '@/components/ui';
+﻿import { Avatar, Button } from '@/components/ui';
 import type { CandidateProfile } from '@/lib/types';
 import { getInitials } from '@/lib/utils/helpers';
 import { VerifiedSkillBadge } from './VerifiedSkillBadge';
@@ -33,14 +33,14 @@ export function ProfileHeader({ profile, isOwner = false, onShare }: ProfileHead
   const topSkills = profile.verifiedSkills.slice(0, 4);
 
   return (
-    <section className="overflow-hidden rounded-[24px] border-hairline border-border-secondary bg-background-secondary shadow-xl shadow-black/10">
+    <section className="overflow-hidden rounded-[24px] border-hairline border-border-secondary bg-background-secondary ">
       <div className="border-b-hairline border-border px-5 py-5 md:px-6">
         <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
           <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start">
             <Avatar
               initials={getInitials(profile.fullName)}
               size="lg"
-              className="h-24 w-24 border border-[rgba(124,111,247,0.42)] bg-background-tertiary text-3xl shadow-md shadow-black/20"
+              className="h-24 w-24 border border-accent bg-background-tertiary text-3xl shadow-md shadow-black/20"
             />
 
             <div className="min-w-0">
@@ -48,7 +48,7 @@ export function ProfileHeader({ profile, isOwner = false, onShare }: ProfileHead
                 <h1 className="text-[28px] font-semibold leading-tight text-foreground md:text-[34px]">
                   {profile.fullName}
                 </h1>
-                <span className="rounded-pill border-hairline border-[rgba(34,197,94,0.3)] bg-success-bg px-2.5 py-1 text-xs font-medium text-success">
+                <span className="rounded-pill border-hairline border-success bg-success-bg px-2.5 py-1 text-xs font-medium text-success">
                   Verified
                 </span>
               </div>
@@ -83,7 +83,7 @@ export function ProfileHeader({ profile, isOwner = false, onShare }: ProfileHead
             <Button
               variant="accent"
               size="sm"
-              className="h-9 rounded-pill px-4 text-xs hover:border-[rgba(124,111,247,0.58)]"
+              className="h-9 rounded-pill px-4 text-xs hover:border-accent"
               onClick={onShare}
             >
               Share Profile
@@ -107,7 +107,7 @@ export function ProfileHeader({ profile, isOwner = false, onShare }: ProfileHead
             <button
               key={label}
               type="button"
-              className="h-8 rounded-pill border-hairline border-border-secondary bg-background-tertiary px-3 text-xs font-medium text-foreground-secondary transition-colors hover:border-[rgba(124,111,247,0.45)] hover:text-foreground"
+              className="h-8 rounded-pill border-hairline border-border-secondary bg-background-tertiary px-3 text-xs font-medium text-foreground-secondary transition-colors hover:border-accent hover:text-foreground"
             >
               {label}
             </button>

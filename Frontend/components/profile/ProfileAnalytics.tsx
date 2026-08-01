@@ -1,4 +1,4 @@
-import type { CandidateProfile } from '@/lib/types';
+﻿import type { CandidateProfile } from '@/lib/types';
 
 interface ProfileAnalyticsProps {
   profile: CandidateProfile;
@@ -14,7 +14,7 @@ export function ProfileAnalytics({ profile }: ProfileAnalyticsProps) {
   return (
     <section
       id="career-analytics"
-      className="rounded-[24px] border-hairline border-border-secondary bg-background-secondary p-5 shadow-xl shadow-black/10 md:p-6"
+      className="rounded-[24px] border-hairline border-border-secondary bg-background-secondary p-5  md:p-6"
     >
       <div className="mb-4">
         <p className="mb-1 text-xs font-medium text-accent">Statistics</p>

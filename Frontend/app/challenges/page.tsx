@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import apiClient from '@/lib/api/client'; // Keep this import in case it's used elsewhere or for future real API calls
+import _apiClient from '@/lib/api/client'; // Keep this import in case it's used elsewhere or for future real API calls
 import { challengeAPI } from '@/lib/api/endpoints'; // Keep this import in case it's used elsewhere or for future real API calls
 import { ChallengeSummary } from '@/lib/types/challenge';
 import { DashboardShell } from '@/components/layout/DashboardShell';
@@ -15,7 +15,7 @@ interface ChallengeCardProps {
 }
 
 function ChallengeCard({ challenge }: ChallengeCardProps) {
-  const router = useRouter();
+  const _router = useRouter();
   const isChallengeOpen = new Date(challenge.deadline) > new Date();
 
   return (

@@ -1,4 +1,4 @@
-import { Badge } from '@/components/ui';
+﻿import { Badge } from '@/components/ui';
 import type { Evidence, EvidenceStatus, SubmissionFile } from '@/lib/types';
 import { formatDate } from '@/lib/utils/helpers';
 import { VerifiedSkillBadge } from './VerifiedSkillBadge';
@@ -68,7 +68,7 @@ export function EvidenceDetailPanel({ evidence }: EvidenceDetailPanelProps) {
               {formatDate(evidence.completedAt)}
             </p>
           </div>
-          <div className="rounded-lg border-hairline border-[rgba(34,197,94,0.25)] bg-success-bg px-4 py-3">
+          <div className="rounded-lg border-hairline border-success bg-success-bg px-4 py-3">
             <p className="text-2xs uppercase text-success">Final score</p>
             <p className="text-3xl font-semibold text-success">
               {evidence.finalScore}

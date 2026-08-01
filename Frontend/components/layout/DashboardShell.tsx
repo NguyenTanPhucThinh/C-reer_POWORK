@@ -8,13 +8,23 @@ import { Sidebar } from './Sidebar';
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { status } = useAuth();
+  const { status, user } = useAuth();
 
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.replace('/login');
     }
   }, [status, router]);
+
+  // Retint toàn workspace theo vai trò: candidate = xanh lá, employer = vàng cam tối
+  useEffect(() => {
+    if (!user) return;
+    const role = user.role === 'Employer' ? 'employer' : 'candidate';
+    document.documentElement.setAttribute('data-role', role);
+    return () => {
+      document.documentElement.removeAttribute('data-role');
+    };
+  }, [user]);
 
   if (status !== 'authenticated') {
     return (

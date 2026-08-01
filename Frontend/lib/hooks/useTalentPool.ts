@@ -1,48 +1,36 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { talentPoolAPI } from '@/lib/api/talent-pool';
-import type { TalentPoolStatus } from '@/lib/types';
-import toast from 'react-hot-toast'; 
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'react-hot-toast'; // Assuming react-hot-toast is used
+import { getTalentPool, updateTalentPoolStatus, addToTalentPool } from '../api/talent-pool';
+import { TalentPoolStatus, TalentPoolEntry } from '../types/talent-pool'; // Import types from common types file
 
-export function useTalentPool() {
-  return useQuery({
+export const useTalentPool = () => {
+  return useQuery<TalentPoolEntry[]>({
     queryKey: ['talent-pool'],
-    queryFn: () => talentPoolAPI.getTalentPool(),
+    queryFn: getTalentPool,
   });
-}
+};
 
-export function useUpdateTalentPoolStatus() {
+export const useUpdateTalentPoolStatus = () => {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: ({ poolId, status }: { poolId: string; status: TalentPoolStatus }) =>
-      talentPoolAPI.updateTalentPoolStatus(poolId, status),
+      updateTalentPoolStatus(poolId, status),
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['talent-pool'],
-      });
+      queryClient.invalidateQueries({ queryKey: ['talent-pool'] });
       toast.success('Cập nhật trạng thái thành công');
     },
-    onError: (error: Error) => {
-      toast.error('Có lỗi xảy ra khi cập nhật trạng thái');
-      console.error('Update Talent Pool Error:', error);
-    },
+    // Optional: onError for optimistic updates rollback or error handling
   });
-}
+};
 
-export function useAddToTalentPool() {
+export const useAddToTalentPool = () => {
   const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: (userId: string) => talentPoolAPI.addToTalentPool(userId),
+    mutationFn: (userId: string) => addToTalentPool(userId),
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['talent-pool'],
-      });
+      queryClient.invalidateQueries({ queryKey: ['talent-pool'] });
       toast.success('Lưu ứng viên vào Talent Pool thành công!');
     },
-    onError: (error: Error) => {
-      toast.error('Có lỗi xảy ra khi lưu ứng viên');
-      console.error('Add To Talent Pool Error:', error);
-    },
+    // Optional: onError for error handling
   });
-}
+};

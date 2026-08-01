@@ -19,7 +19,7 @@ export function Avatar({ initials, size = 'md', className, ...props }: AvatarPro
     <span
       className={cn(
         'inline-flex shrink-0 items-center justify-center rounded-full font-semibold',
-        'bg-accent-bg text-accent border-hairline border-[rgba(124,111,247,0.4)]',
+        'bg-accent-bg text-accent border border-accent',
         sizeStyles[size],
         className
       )}

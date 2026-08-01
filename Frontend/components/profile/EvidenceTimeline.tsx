@@ -1,4 +1,4 @@
-import type { Evidence } from '@/lib/types';
+﻿import type { Evidence } from '@/lib/types';
 import { EmptyEvidenceState } from './EmptyEvidenceState';
 import { EvidenceTimelineItem } from './EvidenceTimelineItem';
 
@@ -14,7 +14,7 @@ export function EvidenceTimeline({ evidences }: EvidenceTimelineProps) {
   return (
     <section
       id="career-timeline"
-      className="rounded-[24px] border-hairline border-border-secondary bg-background-secondary p-5 shadow-xl shadow-black/10 md:p-6"
+      className="rounded-[24px] border-hairline border-border-secondary bg-background-secondary p-5  md:p-6"
     >
       <div className="mb-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
         <div>

@@ -6,17 +6,8 @@ import { useAuth } from '@/lib/hooks/useAuth';
 import { useUIStore } from '@/lib/store/uiStore';
 import { NAV_BY_ROLE, type NavIconName } from '@/lib/constants/nav';
 import { cn } from '@/lib/utils/cn';
-import {
-  BellIcon,
-  BookmarkIcon,
-  BrandIcon,
-  CompanyIcon,
-  DotsIcon,
-  HistoryIcon,
-  MenuIcon,
-  SettingsIcon,
-  SidebarNavIcon,
-} from './SidebarIcons';
+import { MenuIcon, SettingsIcon, SidebarNavIcon } from './SidebarIcons';
+import Image from 'next/image';
 
 type WorkspaceItem = {
   label: string;
@@ -24,6 +15,7 @@ type WorkspaceItem = {
   icon?: NavIconName;
   badge?: string;
   status?: 'active' | 'new' | 'quiet';
+  onClick?: () => void;
 };
 
 const pinnedChallenges: WorkspaceItem[] = [
@@ -45,25 +37,6 @@ const pinnedChallenges: WorkspaceItem[] = [
     badge: '88',
     status: 'new',
   },
-];
-
-const pinnedCompanies: WorkspaceItem[] = [
-  { label: 'Google', status: 'quiet' },
-  { label: 'FPT', status: 'active' },
-  { label: 'VNG', status: 'new' },
-  { label: 'Shopee', status: 'quiet' },
-];
-
-const followingItems: WorkspaceItem[] = [
-  { label: 'Recruiters', badge: '3', status: 'new' },
-  { label: 'Mentors', status: 'quiet' },
-  { label: 'Organizations', badge: '8', status: 'active' },
-];
-
-const recentItems: WorkspaceItem[] = [
-  { label: 'Evidence reviewed', href: '/candidate/profile/evidence/evidence-next-dashboard' },
-  { label: 'Profile shared', href: '/candidate/profile' },
-  { label: 'Challenge submitted', href: '/candidate/profile/evidence/evidence-rubric-builder' },
 ];
 
 function isActivePath(pathname: string, href?: string) {
@@ -134,12 +107,6 @@ function WorkspaceRow({
               {item.badge}
             </span>
           )}
-          <span
-            aria-hidden="true"
-            className="hidden h-7 w-7 shrink-0 items-center justify-center rounded-md text-foreground-tertiary transition-colors hover:bg-background hover:text-foreground group-hover:flex"
-          >
-            <DotsIcon className="h-4 w-4" />
-          </span>
         </>
       )}
       {!sidebarOpen && item.badge && (
@@ -170,7 +137,7 @@ function WorkspaceRow({
   }
 
   return (
-    <button type="button" title={item.label} className={className}>
+    <button type="button" title={item.label} onClick={item.onClick} className={className}>
       {content}
     </button>
   );
@@ -178,7 +145,10 @@ function WorkspaceRow({
 
 function SidebarSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <details open className="group/section border-b border-border-secondary py-1 last:border-b-0">
+    <details
+      open
+      className="group/section border-b border-border-secondary/40 py-1 last:border-b-0"
+    >
       <summary className="flex h-11 cursor-pointer list-none items-center justify-between px-3 text-base font-semibold text-foreground transition-colors hover:text-accent [&::-webkit-details-marker]:hidden">
         <span>{title}</span>
         <span
@@ -196,51 +166,80 @@ export function Sidebar() {
   const { user } = useAuth();
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
+  const toggleNotifications = useUIStore((s) => s.toggleNotifications);
 
   const items = user ? NAV_BY_ROLE[user.role] : [];
   const workspaceItems: WorkspaceItem[] = [
     ...items,
     { label: 'Bookmarks', icon: 'bookmark', badge: '6', status: 'new' },
-    { label: 'Notifications', icon: 'notification', badge: '4', status: 'new' },
+    {
+      label: 'Notifications',
+      icon: 'notification',
+      badge: '4',
+      status: 'new',
+      onClick: toggleNotifications,
+    },
   ];
 
   return (
     <aside
       className={cn(
-        'relative z-20 flex h-screen shrink-0 flex-col border-r border-border-secondary bg-background-secondary shadow-[6px_0_18px_rgba(0,0,0,0.14)] transition-all duration-200',
+        'relative z-20 flex h-screen shrink-0 flex-col border-r border-border-secondary bg-sidebar shadow-[6px_0_18px_rgba(0,0,0,0.12)] transition-all duration-200',
         sidebarOpen ? 'w-[272px]' : 'w-[76px]'
       )}
     >
+      {/* Top Bar Header - Bỏ sọc ngang phân cách bên dưới giữa logo POWORK và workspace */}
       <div
         className={cn(
-          'flex h-16 shrink-0 items-center border-b border-border-secondary',
+          'flex h-16 shrink-0 items-center',
           sidebarOpen ? 'justify-between px-4' : 'justify-center px-2'
         )}
       >
         {sidebarOpen && (
           <div className="flex min-w-0 items-center gap-3">
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[rgba(124,111,247,0.38)] bg-accent-bg text-accent">
-              <BrandIcon className="h-[22px] w-[22px]" />
-            </span>
+            <Image
+              src="/favicon/favicon-96x96.png"
+              alt="POWORK Favicon"
+              width={48}
+              height={48}
+              className="h-12 w-12 shrink-0 rounded-xl object-contain shadow-md"
+            />
             <div className="min-w-0">
-              <span className="block truncate text-lg font-semibold text-foreground">POWORK</span>
-              <span className="block truncate text-sm text-foreground-secondary">
+              <span className="block truncate text-xl font-bold text-foreground tracking-tight">
+                POWORK
+              </span>
+              <span className="block truncate text-xs text-foreground-secondary font-medium">
                 Career workspace
               </span>
             </div>
           </div>
         )}
+        {/* Button chuyển thành favicon khi collapse sidebar */}
         <button
           type="button"
           onClick={toggleSidebar}
           aria-label="Toggle navigation sidebar"
-          title="Toggle navigation sidebar"
-          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-foreground-secondary transition-colors hover:bg-background-tertiary hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+          title={sidebarOpen ? 'Thu gọn sidebar' : 'Mở rộng sidebar'}
+          className={cn(
+            'inline-flex shrink-0 items-center justify-center rounded-lg text-foreground-secondary transition-all hover:bg-background-tertiary hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent',
+            sidebarOpen ? 'h-10 w-10' : 'h-12 w-12'
+          )}
         >
-          <MenuIcon className="h-[22px] w-[22px]" />
+          {sidebarOpen ? (
+            <MenuIcon className="h-[22px] w-[22px]" />
+          ) : (
+            <Image
+              src="/favicon/favicon-96x96.png"
+              alt="Favicon"
+              width={48}
+              height={48}
+              className="h-12 w-12 rounded-xl object-contain shadow-md transition-transform hover:scale-105"
+            />
+          )}
         </button>
       </div>
 
+      {/* Navigation List - Chỉ giữ lại 2 section: Workspace và Pinned Challenge */}
       <nav className="sidebar-scroll flex min-h-0 flex-1 flex-col overflow-y-auto px-3 py-2">
         {sidebarOpen ? (
           <>
@@ -255,41 +254,8 @@ export function Sidebar() {
               ))}
             </SidebarSection>
 
-            <SidebarSection title="Pinned Challenges">
+            <SidebarSection title="Pinned Challenge">
               {pinnedChallenges.map((item) => (
-                <WorkspaceRow
-                  key={item.label}
-                  item={item}
-                  pathname={pathname}
-                  sidebarOpen={sidebarOpen}
-                />
-              ))}
-            </SidebarSection>
-
-            <SidebarSection title="Pinned Companies">
-              {pinnedCompanies.map((item) => (
-                <WorkspaceRow
-                  key={item.label}
-                  item={item}
-                  pathname={pathname}
-                  sidebarOpen={sidebarOpen}
-                />
-              ))}
-            </SidebarSection>
-
-            <SidebarSection title="Following">
-              {followingItems.map((item) => (
-                <WorkspaceRow
-                  key={item.label}
-                  item={item}
-                  pathname={pathname}
-                  sidebarOpen={sidebarOpen}
-                />
-              ))}
-            </SidebarSection>
-
-            <SidebarSection title="Recent Activity">
-              {recentItems.map((item) => (
                 <WorkspaceRow
                   key={item.label}
                   item={item}
@@ -301,9 +267,17 @@ export function Sidebar() {
           </>
         ) : (
           <div className="space-y-1 py-1">
-            {workspaceItems.slice(0, 6).map((item) => (
+            {workspaceItems.map((item) => (
               <WorkspaceRow
                 key={`${item.label}-${item.href ?? 'local'}`}
+                item={item}
+                pathname={pathname}
+                sidebarOpen={sidebarOpen}
+              />
+            ))}
+            {pinnedChallenges.map((item) => (
+              <WorkspaceRow
+                key={`pinned-${item.label}`}
                 item={item}
                 pathname={pathname}
                 sidebarOpen={sidebarOpen}
@@ -313,7 +287,8 @@ export function Sidebar() {
         )}
       </nav>
 
-      <div className="shrink-0 border-t border-border-secondary bg-background-secondary px-3 py-3 shadow-[0_-8px_18px_rgba(0,0,0,0.12)]">
+      {/* Bottom Footer Section */}
+      <div className="shrink-0 border-t border-border-secondary bg-sidebar px-3 py-3 shadow-[0_-8px_18px_rgba(0,0,0,0.08)]">
         {sidebarOpen ? (
           <div className="space-y-0.5">
             <WorkspaceRow
@@ -332,42 +307,21 @@ export function Sidebar() {
           </div>
         ) : (
           <div className="space-y-1">
-            <button
-              type="button"
-              title="Bookmarks"
-              className="relative flex h-11 w-full items-center justify-center rounded-lg text-foreground-secondary transition-colors hover:bg-background-tertiary hover:text-foreground"
-            >
-              <BookmarkIcon className="h-5 w-5" />
-              <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-accent" />
-            </button>
-            <button
-              type="button"
-              title="Notifications"
-              className="relative flex h-11 w-full items-center justify-center rounded-lg text-foreground-secondary transition-colors hover:bg-background-tertiary hover:text-foreground"
-            >
-              <BellIcon className="h-5 w-5" />
-              <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-accent" />
-            </button>
-            <button
-              type="button"
-              title="Recent activity"
-              className="flex h-11 w-full items-center justify-center rounded-lg text-foreground-secondary transition-colors hover:bg-background-tertiary hover:text-foreground"
-            >
-              <HistoryIcon className="h-5 w-5" />
-            </button>
-            <button
-              type="button"
-              title="Pinned companies"
-              className="flex h-11 w-full items-center justify-center rounded-lg text-foreground-secondary transition-colors hover:bg-background-tertiary hover:text-foreground"
-            >
-              <CompanyIcon className="h-5 w-5" />
-            </button>
+            {/* Bỏ Bookmarks/Notifications trùng lặp — đã có trong danh sách Workspace phía trên */}
             <button
               type="button"
               title="Settings"
               className="flex h-11 w-full items-center justify-center rounded-lg text-foreground-secondary transition-colors hover:bg-background-tertiary hover:text-foreground"
             >
               <SettingsIcon className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={toggleSidebar}
+              title="Expand Sidebar"
+              className="relative flex h-11 w-full items-center justify-center rounded-lg text-foreground-secondary transition-colors hover:bg-background-tertiary hover:text-foreground"
+            >
+              <MenuIcon className="h-[22px] w-[22px]" />
             </button>
           </div>
         )}

@@ -6,6 +6,11 @@ export interface TalentPoolCandidate {
   university?: string;
   year?: string;
   primary_skills?: string[];
+  avatar_url?: string;
+  email?: string;
+  phone?: string;
+  location?: string;
+  bio?: string;
 }
 
 export interface TalentPoolEntry {
@@ -19,4 +24,12 @@ export interface TalentPoolEntry {
 
 export interface AddToTalentPoolRequest {
   user_id: string;
+}
+
+export interface RecentActivity {
+  id: string;
+  candidate_name: string;
+  action: string;
+  timestamp: string;
+  type: 'status_change' | 'added_to_pool' | 'invited' | 'challenge_completed';
 }

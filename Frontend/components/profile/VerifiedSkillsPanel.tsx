@@ -1,4 +1,4 @@
-import type { VerifiedSkill } from '@/lib/types';
+﻿import type { VerifiedSkill } from '@/lib/types';
 import { VerifiedSkillBadge } from './VerifiedSkillBadge';
 
 interface VerifiedSkillsPanelProps {
@@ -7,7 +7,7 @@ interface VerifiedSkillsPanelProps {
 
 export function VerifiedSkillsPanel({ skills }: VerifiedSkillsPanelProps) {
   return (
-    <section className="rounded-[24px] border-hairline border-border-secondary bg-background-secondary p-6 shadow-xl shadow-black/10">
+    <section className="rounded-[24px] border-hairline border-border-secondary bg-background-secondary p-6 ">
       <div className="mb-5 flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
         <div>
           <p className="mb-2 text-2xs font-semibold uppercase tracking-[0.18em] text-accent">

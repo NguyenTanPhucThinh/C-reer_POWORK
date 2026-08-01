@@ -1,4 +1,4 @@
-import type { SkillSummaryItem } from '@/lib/types';
+﻿import type { SkillSummaryItem } from '@/lib/types';
 
 interface SkillSummaryCardProps {
   skills: SkillSummaryItem[];
@@ -8,7 +8,7 @@ export function SkillSummaryCard({ skills }: SkillSummaryCardProps) {
   const tones = ['bg-accent', 'bg-success', 'bg-warning', 'bg-info'];
 
   return (
-    <section className="rounded-[22px] border-hairline border-border-secondary bg-background-secondary p-5 shadow-xl shadow-black/10">
+    <section className="rounded-[22px] border-hairline border-border-secondary bg-background-secondary p-5 ">
       <div className="mb-4">
         <h2 className="text-xl font-semibold text-foreground">Skill Summary</h2>
         <p className="mt-1 text-sm text-foreground-tertiary">

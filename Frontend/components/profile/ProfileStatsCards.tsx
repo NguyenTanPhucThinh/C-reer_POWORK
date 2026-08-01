@@ -1,4 +1,4 @@
-import type { CandidateProfile } from '@/lib/types';
+﻿import type { CandidateProfile } from '@/lib/types';
 
 interface ProfileStatsCardsProps {
   profile: CandidateProfile;
@@ -41,7 +41,7 @@ export function ProfileStatsCards({ profile }: ProfileStatsCardsProps) {
       {stats.map((stat) => (
         <div
           key={stat.label}
-          className="min-h-[132px] rounded-[20px] border-hairline border-border-secondary bg-background-secondary p-5 shadow-lg shadow-black/10"
+          className="min-h-[132px] rounded-[20px] border-hairline border-border-secondary bg-background-secondary p-5 "
         >
           <div className="flex items-start justify-between gap-3">
             <div>

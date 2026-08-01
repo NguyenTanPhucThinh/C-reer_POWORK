@@ -5,6 +5,12 @@ import Link from 'next/link';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useChallenges } from '@/lib/hooks/useChallenges';
 import { Badge } from '@/components/ui';
+import {
+  ClipboardIcon,
+  CreateIcon,
+  SubmissionIcon,
+  UsersIcon,
+} from '@/components/layout/SidebarIcons';
 
 function formatDate(value: string) {
   const date = new Date(value);
@@ -145,6 +151,29 @@ export default function EmployerDashboardPage() {
         </div>
 
         <aside className="space-y-6">
+          <div>
+            <h3 className="mb-3 text-lg font-semibold text-foreground">Truy cập nhanh</h3>
+            <div className="grid grid-cols-2 gap-2.5">
+              {[
+                { label: 'Tạo challenge', href: '/employer/challenges/create', Icon: CreateIcon },
+                { label: 'Talent Pool', href: '/talent-pool', Icon: UsersIcon },
+                { label: 'Tất cả challenge', href: '/challenges', Icon: ClipboardIcon },
+                { label: 'Bài nộp', href: '/employer/submissions', Icon: SubmissionIcon },
+              ].map((action) => (
+                <Link
+                  key={action.href}
+                  href={action.href}
+                  className="card flex flex-col gap-2 py-3.5 transition-all hover:-translate-y-0.5 hover:border-accent hover:shadow-md"
+                >
+                  <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-bg text-accent">
+                    <action.Icon className="h-5 w-5" />
+                  </span>
+                  <span className="text-xs font-medium text-foreground">{action.label}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+
           <div>
             <h3 className="mb-3 text-lg font-semibold text-foreground">Việc cần làm</h3>
             <div className="space-y-2">

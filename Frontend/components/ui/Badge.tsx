@@ -8,11 +8,11 @@ interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
 }
 
 const variantStyles: Record<BadgeVariant, string> = {
-  open: 'bg-success-bg text-success border-[rgba(34,197,94,0.3)]',
-  blind: 'bg-warning-bg text-warning border-[rgba(245,158,11,0.3)]',
-  done: 'bg-info-bg text-info border-[rgba(96,165,250,0.3)]',
+  open: 'bg-success-bg text-success border-success',
+  blind: 'bg-warning-bg text-warning border-warning',
+  done: 'bg-info-bg text-info border-info',
   fail: 'bg-background-tertiary text-foreground-secondary border-border-secondary',
-  invited: 'bg-[rgba(124,111,247,0.15)] text-[#a89ff5] border-[rgba(124,111,247,0.3)]',
+  invited: 'bg-accent-bg text-accent border-accent',
 };
 
 export function Badge({ variant = 'open', className, ...props }: BadgeProps) {

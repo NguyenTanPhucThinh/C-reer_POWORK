@@ -1,4 +1,4 @@
-import Link from 'next/link';
+﻿import Link from 'next/link';
 import { Badge } from '@/components/ui';
 import type { Evidence, EvidenceStatus } from '@/lib/types';
 import { formatDate } from '@/lib/utils/helpers';
@@ -26,8 +26,8 @@ export function EvidenceTimelineItem({ evidence }: EvidenceTimelineItemProps) {
     `${evidence.challengeTitle} verified ${evidence.skills.length} skill signals.`;
 
   return (
-    <article className="group relative rounded-[18px] border-hairline border-border-secondary bg-background-tertiary p-4 shadow-md shadow-black/10 transition-all hover:border-[rgba(124,111,247,0.5)] hover:shadow-lg hover:shadow-accent/10">
-      <div className="absolute -left-6 top-6 h-3 w-3 rounded-full border-2 border-background-secondary bg-accent shadow-md shadow-accent/20" />
+    <article className="group relative rounded-[18px] border-hairline border-border-secondary bg-background-tertiary p-4  transition-all hover:border-accent ">
+      <div className="absolute -left-6 top-6 h-3 w-3 rounded-full border-2 border-background-secondary bg-accent " />
 
       <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
         <div className="min-w-0">
@@ -51,7 +51,7 @@ export function EvidenceTimelineItem({ evidence }: EvidenceTimelineItemProps) {
           </p>
         </div>
 
-        <div className="shrink-0 rounded-[16px] border-hairline border-[rgba(34,197,94,0.25)] bg-success-bg px-3 py-2 text-left md:text-right">
+        <div className="shrink-0 rounded-[16px] border-hairline border-success bg-success-bg px-3 py-2 text-left md:text-right">
           <p className="text-xs font-medium text-foreground-secondary">Career signal</p>
           <p className="text-2xl font-semibold leading-none text-success">
             {evidence.finalScore}
@@ -69,7 +69,7 @@ export function EvidenceTimelineItem({ evidence }: EvidenceTimelineItemProps) {
       <div className="mt-3 flex justify-end">
         <Link
           href={`/candidate/profile/evidence/${evidence.id}`}
-          className="inline-flex h-8 items-center rounded-pill border-hairline border-[rgba(124,111,247,0.45)] bg-accent-bg px-3 text-xs font-semibold text-accent transition-colors group-hover:border-[rgba(124,111,247,0.68)] group-hover:bg-[rgba(124,111,247,0.22)]"
+          className="inline-flex h-8 items-center rounded-pill border-hairline border-accent bg-accent-bg px-3 text-xs font-semibold text-accent transition-colors group-hover:border-accent group-hover:bg-accent-bg"
         >
           Open event
         </Link>

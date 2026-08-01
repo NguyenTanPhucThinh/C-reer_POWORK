@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -74,6 +74,14 @@ export default function LoginContent() {
   }
 
   const roleSlug = selectedRole === 'Employer' ? 'employer' : 'candidate';
+
+  // Đổi màu nhấn xung quanh theo role đang chọn: candidate xanh lá, employer vàng cam
+  useEffect(() => {
+    document.documentElement.setAttribute('data-role', roleSlug);
+    return () => {
+      document.documentElement.removeAttribute('data-role');
+    };
+  }, [roleSlug]);
 
   const {
     register: registerField,

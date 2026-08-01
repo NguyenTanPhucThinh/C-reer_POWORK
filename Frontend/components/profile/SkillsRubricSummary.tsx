@@ -1,4 +1,4 @@
-import type { SkillSummaryItem, VerifiedSkill } from '@/lib/types';
+﻿import type { SkillSummaryItem, VerifiedSkill } from '@/lib/types';
 import { VerifiedSkillBadge } from './VerifiedSkillBadge';
 
 interface SkillsRubricSummaryProps {
@@ -12,7 +12,7 @@ export function SkillsRubricSummary({ verifiedSkills, skillSummary }: SkillsRubr
   return (
     <section
       id="skills-overview"
-      className="rounded-[24px] border-hairline border-border-secondary bg-background-secondary p-5 shadow-xl shadow-black/10 md:p-6"
+      className="rounded-[24px] border-hairline border-border-secondary bg-background-secondary p-5  md:p-6"
     >
       <div className="mb-4">
         <p className="mb-1 text-xs font-medium text-accent">Skills overview</p>

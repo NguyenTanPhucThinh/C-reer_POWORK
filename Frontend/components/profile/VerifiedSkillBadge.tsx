@@ -1,4 +1,4 @@
-import type { VerifiedSkill } from '@/lib/types';
+﻿import type { VerifiedSkill } from '@/lib/types';
 import { cn } from '@/lib/utils/cn';
 
 interface VerifiedSkillBadgeProps {
@@ -11,9 +11,9 @@ export function VerifiedSkillBadge({ skill, compact, className }: VerifiedSkillB
   return (
     <span
       className={cn(
-        'inline-flex items-center border-hairline shadow-sm shadow-black/10',
+        'inline-flex items-center border-hairline ',
         compact
-          ? 'gap-2 rounded-pill border-[rgba(124,111,247,0.35)] bg-accent-bg px-3 py-1.5 text-2xs text-accent'
+          ? 'gap-2 rounded-pill border-accent bg-accent-bg px-3 py-1.5 text-2xs text-accent'
           : 'gap-3 rounded-[14px] border-border-secondary bg-background-tertiary px-3 py-2 text-xs text-foreground',
         className
       )}

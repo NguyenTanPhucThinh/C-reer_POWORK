@@ -1,4 +1,4 @@
-import type { CandidateProfile } from '@/lib/types';
+﻿import type { CandidateProfile } from '@/lib/types';
 import { formatDate } from '@/lib/utils/helpers';
 
 interface ProfessionalSummaryProps {
@@ -77,7 +77,7 @@ export function ProfessionalSummary({ profile }: ProfessionalSummaryProps) {
   ];
 
   return (
-    <section className="rounded-[24px] border-hairline border-border-secondary bg-background-secondary p-5 shadow-xl shadow-black/10 md:p-6">
+    <section className="rounded-[24px] border-hairline border-border-secondary bg-background-secondary p-5  md:p-6">
       <div className="mb-4">
         <p className="mb-1 text-xs font-medium text-accent">Professional summary</p>
         <h2 className="text-2xl font-semibold text-foreground">Career signal at a glance</h2>

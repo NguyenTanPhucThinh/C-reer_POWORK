@@ -1,14 +1,17 @@
-import type { TalentPoolEntry } from '../types/talent-pool';
+import type { RecentActivity, TalentPoolEntry } from '../types/talent-pool';
 
 export const MOCK_TALENT_POOL: TalentPoolEntry[] = [
   {
     pool_id: '8b9e67a1-1234-421c-a32e-11bc9aef4421',
     candidate: {
       user_id: 'de305d54-75b4-431b-adb2-eb6b9e546014',
-      full_name: 'Phạm Huy Hoàng (Tôi Đi Code Dạo)',
+      full_name: 'Phạm Huy Hoàng',
       university: 'Đại học FPT (FPTU)',
       year: 'Sinh viên năm 4',
       primary_skills: ['Software Architecture', 'C#', 'JavaScript', 'System Design'],
+      email: 'hoang.pham@fpt.edu.vn',
+      location: 'Hà Nội, Việt Nam',
+      bio: 'Đam mê xây dựng các hệ thống quy mô lớn, tối ưu hiệu năng và chia sẻ kiến thức cộng đồng.',
     },
     highest_score: 94.0,
     challenges_taken: ['System Architecture Design', 'Database Clustering'],
@@ -19,10 +22,13 @@ export const MOCK_TALENT_POOL: TalentPoolEntry[] = [
     pool_id: '9c8f78b2-5678-432d-bce3-22cd0bf55322',
     candidate: {
       user_id: 'ca415d67-12b4-481b-ccb2-eb6b9e547012',
-      full_name: 'Lại Đức Hùng (Lập Trình Viên Ở Nhà)',
+      full_name: 'Lại Đức Hùng',
       university: 'Đại học Bách khoa Hà Nội (HUST)',
       year: 'Sinh viên năm 3',
       primary_skills: ['React', 'CSS Grid', 'TailwindCSS', 'TypeScript', 'Frontend Performance'],
+      email: 'hung.ld@hust.edu.vn',
+      location: 'Hà Nội, Việt Nam',
+      bio: 'Frontend developer yêu thích trải nghiệm người dùng hiện đại, thiết kế UI/UX mượt mà.',
     },
     highest_score: 88.0,
     challenges_taken: ['React Dashboard Optimization', 'CSS Layout Speedrun'],
@@ -33,10 +39,13 @@ export const MOCK_TALENT_POOL: TalentPoolEntry[] = [
     pool_id: '5f7e69d3-9012-443e-cde4-33de1cf66433',
     candidate: {
       user_id: 'da305f88-85c4-421b-bdb2-fc6b9e546115',
-      full_name: 'Đinh Phương Sáng (Khoai Lang Thang)',
+      full_name: 'Đinh Phương Sáng',
       university: 'Đại học Bách Khoa TPHCM (HCMUT)',
       year: 'Sinh viên năm 4',
       primary_skills: ['Kiến trúc dân dụng', 'AutoCAD', 'Thiết kế cảnh quan', 'Sketchup'],
+      email: 'sang.dinh@hcmut.edu.vn',
+      location: 'TP. Hồ Chí Minh, Việt Nam',
+      bio: 'Kiến trúc sư tương lai hướng tới các giải pháp kiến trúc xanh và công trình sinh thái bền vững.',
     },
     highest_score: 86.5,
     challenges_taken: ['Thiết kế Không gian công cộng xanh', 'Phối cảnh đô thị bền vững'],
@@ -56,6 +65,9 @@ export const MOCK_TALENT_POOL: TalentPoolEntry[] = [
         'Public Speaking',
         'English Translation',
       ],
+      email: 'vy.tran@dav.edu.vn',
+      location: 'Hà Nội, Việt Nam',
+      bio: 'Chuyên gia ngôn ngữ và truyền thông, giàu kinh nghiệm biên dịch tài liệu đa ngôn ngữ.',
     },
     highest_score: 92.0,
     challenges_taken: ['Biên soạn giáo trình IELTS bổ trợ', 'Dịch thuật tài liệu ngoại giao'],
@@ -66,7 +78,7 @@ export const MOCK_TALENT_POOL: TalentPoolEntry[] = [
     pool_id: '1a2b3c4d-5e6f-7a8b-9c0d-112233445566',
     candidate: {
       user_id: 'fa415d67-12b4-481b-ccb2-eb6b9e547056',
-      full_name: 'Phạm Thành Thái (Thái Phạm Happy Live)',
+      full_name: 'Phạm Thành Thái',
       university: 'Đại học Ngoại thương (FTU)',
       year: 'Sinh viên năm 4',
       primary_skills: [
@@ -75,6 +87,9 @@ export const MOCK_TALENT_POOL: TalentPoolEntry[] = [
         'Asset Allocation',
         'Valuation',
       ],
+      email: 'thai.pham@ftu.edu.vn',
+      location: 'TP. Hồ Chí Minh, Việt Nam',
+      bio: 'Chuyên viên phân tích đầu tư và quản lý danh mục tài chính số.',
     },
     highest_score: 85.0,
     challenges_taken: ['Định giá cổ phiếu doanh nghiệp bán lẻ', 'Lập kế hoạch phân bổ nguồn vốn'],
@@ -85,7 +100,7 @@ export const MOCK_TALENT_POOL: TalentPoolEntry[] = [
     pool_id: '2b3c4d5e-6f7a-8b9c-0d1e-223344556677',
     candidate: {
       user_id: 'ga415d67-12b4-481b-ccb2-eb6b9e547078',
-      full_name: 'Trần Lê Thu Giang (Giang Ơi)',
+      full_name: 'Trần Lê Thu Giang',
       university: 'Đại học Coventry (Coventry)',
       year: 'Sinh viên năm 4',
       primary_skills: [
@@ -94,10 +109,44 @@ export const MOCK_TALENT_POOL: TalentPoolEntry[] = [
         'Brand Styling',
         'Video Production',
       ],
+      email: 'giang.tran@coventry.ac.uk',
+      location: 'TP. Hồ Chí Minh, Việt Nam',
+      bio: 'Content strategist & Brand creator với đam mê kết nối sản phẩm tới cộng đồng Gen Z.',
     },
     highest_score: 89.5,
     challenges_taken: ['Xây dựng chiến dịch Rebranding thương hiệu', 'Kịch bản Video ngắn viral'],
     status: 'IN_POOL',
     added_at: '2026-07-15T11:00:00Z',
+  },
+];
+
+export const MOCK_RECENT_ACTIVITIES: RecentActivity[] = [
+  {
+    id: 'act-1',
+    candidate_name: 'Trần Khánh Vy',
+    action: 'vừa được lưu vào Talent Pool từ màn chấm điểm',
+    timestamp: '15 phút trước',
+    type: 'added_to_pool',
+  },
+  {
+    id: 'act-2',
+    candidate_name: 'Lại Đức Hùng',
+    action: 'đã nhận được thư mời trao đổi công việc',
+    timestamp: '2 giờ trước',
+    type: 'invited',
+  },
+  {
+    id: 'act-3',
+    candidate_name: 'Phạm Huy Hoàng',
+    action: 'đạt 94/100 ở thử thách System Architecture Design',
+    timestamp: 'Hôm qua',
+    type: 'challenge_completed',
+  },
+  {
+    id: 'act-4',
+    candidate_name: 'Phạm Thành Thái',
+    action: 'chuyển trạng thái sang "Đã mời"',
+    timestamp: '2 ngày trước',
+    type: 'status_change',
   },
 ];

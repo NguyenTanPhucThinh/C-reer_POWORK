@@ -1,4 +1,4 @@
-import type { CandidateProfile, Evidence, Profile, VerifiedEvidence } from '@/lib/types';
+import type { CandidateProfile, Evidence, VerifiedEvidence } from '@/lib/types';
 import { apiClient } from './client';
 
 function normalizeProfile(profile: CandidateProfile): CandidateProfile {
