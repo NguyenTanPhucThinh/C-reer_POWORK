@@ -29,7 +29,7 @@ function normalizeProfile(profile: CandidateProfile): CandidateProfile {
 
 export const dynamicProfileAPI = {
   async getCandidateProfile(userId: string): Promise<CandidateProfile> {
-    const response = await apiClient.get('/api/v1/profiles/' + userId);
+    const response = await apiClient.get('/profiles/' + userId);
     const data = response.data.data;
 
     const mappedProfile: CandidateProfile = {

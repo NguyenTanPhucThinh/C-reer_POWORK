@@ -27,7 +27,7 @@ export default function ChallengeDetailPage() {
         const res = await challengeAPI.getById(id as string);
         setChallenge(res);
       } catch (err) {
-        setError('An error occurred while fetching challenge details.');
+        setError('Không thể tải chi tiết thử thách. Vui lòng thử lại sau.');
         console.error(err);
       } finally {
         setLoading(false);

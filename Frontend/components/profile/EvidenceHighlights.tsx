@@ -5,9 +5,9 @@ import { formatDate } from '@/lib/utils/helpers';
 import { VerifiedSkillBadge } from './VerifiedSkillBadge';
 
 const statusLabels: Record<EvidenceStatus, string> = {
-  verified: 'Verified',
-  passed: 'Passed',
-  excellent: 'Excellent',
+  verified: 'Đã xác thực',
+  passed: 'Đã vượt',
+  excellent: 'Xuất sắc',
 };
 
 const statusVariants: Record<EvidenceStatus, 'open' | 'done' | 'invited'> = {
@@ -35,11 +35,11 @@ export function EvidenceHighlights({ evidences }: EvidenceHighlightsProps) {
       <div className="mb-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
         <div>
           <p className="mb-1 text-xs font-medium text-accent">Evidence</p>
-          <h2 className="text-2xl font-semibold text-foreground">Project showcases</h2>
+          <h2 className="text-2xl font-semibold text-foreground">Dự án tiêu biểu</h2>
         </div>
         {evidences.length > highlighted.length && (
           <a href="#career-timeline" className="text-xs font-medium text-accent hover:underline">
-            View full timeline
+            Xem toàn bộ lịch sử
           </a>
         )}
       </div>
@@ -55,7 +55,7 @@ export function EvidenceHighlights({ evidences }: EvidenceHighlightsProps) {
                 {statusLabels[evidence.status]}
               </Badge>
               <div className="rounded-[14px] border-hairline border-success bg-success-bg px-3 py-2 text-right">
-                <p className="text-xs font-medium text-foreground-secondary">Verified score</p>
+                <p className="text-xs font-medium text-foreground-secondary">Điểm đã xác thực</p>
                 <p className="text-2xl font-semibold leading-none text-success">
                   {evidence.finalScore}
                   <span className="text-xs text-foreground-secondary">/{evidence.maxScore}</span>
@@ -86,7 +86,7 @@ export function EvidenceHighlights({ evidences }: EvidenceHighlightsProps) {
                 href={`/candidate/profile/evidence/${evidence.id}`}
                 className="inline-flex h-8 w-fit items-center justify-center rounded-pill border-hairline border-accent bg-accent px-3 text-xs font-semibold text-foreground transition-colors hover:bg-accent-hover"
               >
-                View showcase
+                Xem chi tiết
               </Link>
             </div>
           </article>

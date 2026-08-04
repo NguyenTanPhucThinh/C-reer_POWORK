@@ -8,7 +8,7 @@ import { useUIStore } from '@/lib/store/uiStore';
 import { Avatar, RolePill } from '@/components/ui';
 import { getInitials } from '@/lib/utils/helpers';
 import type { User } from '@/lib/types';
-import { NOTIFICATIONS, toneDot } from '@/lib/data/notifications';
+import { EMPLOYER_NOTIFICATIONS, EMPLOYEE_NOTIFICATIONS, toneDot } from '@/lib/data/notifications';
 import { BellIcon, CreateIcon } from './SidebarIcons';
 
 type ThemeMode = 'dark' | 'light';
@@ -214,12 +214,12 @@ function AccountControlCenter({
       <div className="py-2 border-b border-border space-y-0.5">
         {user.role === 'Employer' ? (
           <>
-            <MenuLink href="/employer/dashboard" label="Dashboard" />
-            <MenuLink href="/talent-pool" label="Talent Pool" />
+            <MenuLink href="/employer/dashboard" label="Tổng quan" />
+            <MenuLink href="/talent-pool" label="Kho ứng viên" />
           </>
         ) : (
           <>
-            <MenuLink href="/candidate/dashboard" label="Dashboard" />
+            <MenuLink href="/candidate/dashboard" label="Tổng quan" />
             <MenuLink href="/candidate/profile" label="Hồ sơ của tôi" />
           </>
         )}
@@ -238,7 +238,8 @@ function AccountControlCenter({
   );
 }
 
-function NotificationCenter({ onClose }: { onClose: () => void }) {
+function NotificationCenter({ onClose, role }: { onClose: () => void; role?: string }) {
+  const list = role === 'Employer' ? EMPLOYER_NOTIFICATIONS : EMPLOYEE_NOTIFICATIONS;
   return (
     <div className="absolute right-0 top-12 z-50 w-[360px] rounded-xl border border-border bg-background-secondary text-foreground shadow-2xl animate-in fade-in duration-150">
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
@@ -251,7 +252,7 @@ function NotificationCenter({ onClose }: { onClose: () => void }) {
         </button>
       </div>
       <div className="max-h-[420px] overflow-y-auto py-1.5">
-        {NOTIFICATIONS.map((n) => (
+        {list.map((n) => (
           <div
             key={n.id}
             className={`relative flex gap-3 px-4 py-3 transition-colors hover:bg-background-tertiary ${
@@ -327,7 +328,8 @@ export function Header() {
   const notifOpen = useUIStore((s) => s.notificationsOpen);
   const setNotifOpen = useUIStore((s) => s.setNotificationsOpen);
   const toggleNotifOpen = useUIStore((s) => s.toggleNotifications);
-  const unreadCount = NOTIFICATIONS.filter((n) => n.unread).length;
+  const notifList = user?.role === 'Employer' ? EMPLOYER_NOTIFICATIONS : EMPLOYEE_NOTIFICATIONS;
+  const unreadCount = notifList.filter((n) => n.unread).length;
   const [theme, setTheme] = useState<ThemeMode>(() => {
     if (typeof window === 'undefined') return 'dark';
     const stored = window.localStorage.getItem('powork-theme');
@@ -390,7 +392,7 @@ export function Header() {
             className="hidden h-10 items-center gap-2 rounded-lg bg-white/15 px-3.5 text-xs font-semibold text-white shadow-xs transition-all hover:bg-white/25 active:scale-95 md:inline-flex border border-white/20"
           >
             <CreateIcon className="h-[18px] w-[18px]" />
-            Create Challenge
+            Tạo Challenge
           </Link>
         )}
         <div className="relative">
@@ -413,7 +415,9 @@ export function Header() {
               </span>
             )}
           </button>
-          {notifOpen && <NotificationCenter onClose={() => setNotifOpen(false)} />}
+          {notifOpen && (
+            <NotificationCenter onClose={() => setNotifOpen(false)} role={user?.role} />
+          )}
         </div>
 
         {user && (

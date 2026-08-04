@@ -1,12 +1,12 @@
 const tabs = [
-  { label: 'Timeline', href: '#career-timeline' },
-  { label: 'Evidence', href: '#evidence' },
-  { label: 'Projects', href: '#evidence' },
-  { label: 'Achievements', href: '#career-analytics' },
-  { label: 'Activity', href: '#career-timeline' },
-  { label: 'Statistics', href: '#career-analytics' },
-  { label: 'Bookmarks', href: '#evidence' },
-  { label: 'Saved Challenges', href: '#evidence' },
+  { label: 'Dòng thời gian', href: '#career-timeline' },
+  { label: 'Bằng chứng', href: '#evidence' },
+  { label: 'Dự án', href: '#evidence' },
+  { label: 'Thành tích', href: '#career-analytics' },
+  { label: 'Hoạt động', href: '#career-timeline' },
+  { label: 'Thống kê', href: '#career-analytics' },
+  { label: 'Đã lưu', href: '#evidence' },
+  { label: 'Challenge đã lưu', href: '#evidence' },
 ];
 
 export function ProfileNavigationTabs() {

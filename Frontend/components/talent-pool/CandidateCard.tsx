@@ -83,7 +83,7 @@ export function CandidateCard({ entry, onStatusChange, onViewProfile }: Candidat
               className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background-secondary ${
                 invited ? 'bg-info' : 'bg-success'
               }`}
-              title={invited ? 'Đã gửi lời mời' : 'Đang trong pool'}
+              title={invited ? 'Đã gửi lời mời phỏng vấn' : 'Đang trong danh sách chờ'}
             />
           </div>
 
@@ -121,7 +121,7 @@ export function CandidateCard({ entry, onStatusChange, onViewProfile }: Candidat
         ))}
       </div>
 
-      {/* Footer: tag trạng thái bấm được (toggle) + View Profile */}
+      {/* Footer: tag trạng thái bấm được (toggle) + Xem hồ sơ */}
       <div className="mt-5 flex items-center justify-between gap-3 border-t border-border/60 pt-3.5">
         <button
           type="button"
@@ -134,7 +134,7 @@ export function CandidateCard({ entry, onStatusChange, onViewProfile }: Candidat
           }`}
         >
           <span className={`h-1.5 w-1.5 rounded-full ${invited ? 'bg-info' : 'bg-success'}`} />
-          {invited ? 'Invited' : 'In Pool'}
+          {invited ? 'Đã mời' : 'Trong Pool'}
         </button>
 
         <button
@@ -142,7 +142,7 @@ export function CandidateCard({ entry, onStatusChange, onViewProfile }: Candidat
           onClick={() => onViewProfile?.(entry)}
           className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition-all duration-150 hover:bg-accent-hover active:scale-95"
         >
-          <span>View Profile</span>
+          <span>Xem hồ sơ</span>
           <svg
             className="h-3.5 w-3.5"
             viewBox="0 0 24 24"

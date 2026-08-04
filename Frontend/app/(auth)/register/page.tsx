@@ -77,7 +77,7 @@ export default function RegisterPage() {
               type="text"
               autoComplete="email"
               {...registerField('email')}
-              placeholder="you@example.com"
+              placeholder="ban@email.com"
               className="input-base !text-base h-11"
             />
             {errors.email && <p className="text-red-400 text-base mt-1">{errors.email.message}</p>}

@@ -71,7 +71,7 @@ export function CandidateProfileModal({
                   status === 'INVITED' ? 'bg-info-bg text-info' : 'bg-success-bg text-success'
                 }`}
               >
-                {status === 'INVITED' ? 'Invited' : 'In Pool'}
+                {status === 'INVITED' ? 'Đã mời' : 'Trong Pool'}
               </span>
             </div>
 
@@ -177,7 +177,7 @@ export function CandidateProfileModal({
             {status === 'INVITED' ? (
               <>
                 <RefreshIcon className="h-4 w-4" />
-                Chuyển về In Pool
+                Chuyển về Pool
               </>
             ) : (
               <>

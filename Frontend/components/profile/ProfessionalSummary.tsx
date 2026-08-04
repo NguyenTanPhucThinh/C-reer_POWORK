@@ -45,33 +45,37 @@ export function ProfessionalSummary({ profile }: ProfessionalSummaryProps) {
   )[0];
 
   const summaryItems = [
-    { label: 'Overall Score', value: `${profile.averageScore}/100`, tone: 'text-success' },
-    { label: 'Verified Evidence', value: `${profile.evidences.length}`, tone: 'text-foreground' },
+    { label: 'Điểm tổng thể', value: `${profile.averageScore}/100`, tone: 'text-success' },
     {
-      label: 'Completed Challenges',
+      label: 'Bằng chứng đã xác thực',
+      value: `${profile.evidences.length}`,
+      tone: 'text-foreground',
+    },
+    {
+      label: 'Challenge đã vượt',
       value: `${profile.passedChallenges}/${profile.totalChallenges}`,
       tone: 'text-foreground',
     },
     {
-      label: 'Average Rubric Score',
+      label: 'Điểm Rubric TB',
       value: `${averageRubricScore(profile)}%`,
       tone: 'text-accent',
     },
     {
-      label: 'Company Reviews',
+      label: 'Đánh giá từ Nhà tuyển dụng',
       value: `${profile.evidences.filter((evidence) => evidence.employerFeedback).length}`,
       tone: 'text-foreground',
     },
-    { label: 'Acceptance Rate', value: `${acceptanceRate}%`, tone: 'text-success' },
-    { label: 'Current Rank', value: currentRank(profile.averageScore), tone: 'text-accent' },
+    { label: 'Tỷ lệ đạt', value: `${acceptanceRate}%`, tone: 'text-success' },
+    { label: 'Xếp hạng hiện tại', value: currentRank(profile.averageScore), tone: 'text-accent' },
     {
-      label: 'Profile Completion',
+      label: 'Độ hoàn thiện hồ sơ',
       value: `${profileCompletion(profile)}%`,
       tone: 'text-foreground',
     },
     {
-      label: 'Recent Activity',
-      value: latestEvidence ? formatDate(latestEvidence.completedAt) : 'No activity yet',
+      label: 'Hoạt động gần đây',
+      value: latestEvidence ? formatDate(latestEvidence.completedAt) : 'Chưa có hoạt động',
       tone: 'text-foreground',
     },
   ];
@@ -79,8 +83,8 @@ export function ProfessionalSummary({ profile }: ProfessionalSummaryProps) {
   return (
     <section className="rounded-[24px] border-hairline border-border-secondary bg-background-secondary p-5  md:p-6">
       <div className="mb-4">
-        <p className="mb-1 text-xs font-medium text-accent">Professional summary</p>
-        <h2 className="text-2xl font-semibold text-foreground">Career signal at a glance</h2>
+        <p className="mb-1 text-xs font-medium text-accent">Tóm tắt chuyên môn</p>
+        <h2 className="text-2xl font-semibold text-foreground">Tín hiệu sự nghiệp của bạn</h2>
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">

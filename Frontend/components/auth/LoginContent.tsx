@@ -161,7 +161,7 @@ export default function LoginContent() {
                 : 'border-warning/40 bg-warning-bg text-warning'
             }`}
           >
-            {selectedRole === 'Candidate' ? 'Candidate' : 'Employer'}
+            {selectedRole === 'Candidate' ? 'Ứng viên' : 'Nhà tuyển dụng'}
           </span>
         </div>
 
@@ -214,7 +214,7 @@ export default function LoginContent() {
                     type="email"
                     autoComplete="email"
                     {...registerField('email')}
-                    placeholder={selectedRole === 'Employer' ? 'hr@company.com' : 'you@email.com'}
+                    placeholder={selectedRole === 'Employer' ? 'hr@congty.com' : 'ban@email.com'}
                     className="input-base w-full rounded-xl border-2 !px-5 !py-4.5 !text-base font-medium"
                   />
                   {errors.email && (

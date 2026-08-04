@@ -14,8 +14,8 @@ const roleStyles: Record<Role, string> = {
 };
 
 const roleLabels: Record<Role, string> = {
-  employer: 'Employer',
-  candidate: 'Candidate',
+  employer: 'Nhà tuyển dụng',
+  candidate: 'Ứng viên',
   system: 'Hệ thống',
 };
 

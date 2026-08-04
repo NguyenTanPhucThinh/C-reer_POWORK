@@ -169,17 +169,6 @@ export function Sidebar() {
   const toggleNotifications = useUIStore((s) => s.toggleNotifications);
 
   const items = user ? NAV_BY_ROLE[user.role] : [];
-  const workspaceItems: WorkspaceItem[] = [
-    ...items,
-    { label: 'Bookmarks', icon: 'bookmark', badge: '6', status: 'new' },
-    {
-      label: 'Notifications',
-      icon: 'notification',
-      badge: '4',
-      status: 'new',
-      onClick: toggleNotifications,
-    },
-  ];
 
   return (
     <aside
@@ -188,7 +177,7 @@ export function Sidebar() {
         sidebarOpen ? 'w-[272px]' : 'w-[76px]'
       )}
     >
-      {/* Top Bar Header - Bỏ sọc ngang phân cách bên dưới giữa logo POWORK và workspace */}
+      {/* Top Bar Header */}
       <div
         className={cn(
           'flex h-16 shrink-0 items-center',
@@ -209,7 +198,7 @@ export function Sidebar() {
                 POWORK
               </span>
               <span className="block truncate text-xs text-foreground-secondary font-medium">
-                Career workspace
+                Không gian sự nghiệp
               </span>
             </div>
           </div>
@@ -218,7 +207,7 @@ export function Sidebar() {
         <button
           type="button"
           onClick={toggleSidebar}
-          aria-label="Toggle navigation sidebar"
+          aria-label="Thu gọn/mở rộng sidebar"
           title={sidebarOpen ? 'Thu gọn sidebar' : 'Mở rộng sidebar'}
           className={cn(
             'inline-flex shrink-0 items-center justify-center rounded-lg text-foreground-secondary transition-all hover:bg-background-tertiary hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent',
@@ -239,12 +228,12 @@ export function Sidebar() {
         </button>
       </div>
 
-      {/* Navigation List - Chỉ giữ lại 2 section: Workspace và Pinned Challenge */}
+      {/* Navigation List */}
       <nav className="sidebar-scroll flex min-h-0 flex-1 flex-col overflow-y-auto px-3 py-2">
         {sidebarOpen ? (
           <>
-            <SidebarSection title="Workspace">
-              {workspaceItems.map((item) => (
+            <SidebarSection title="Không gian làm việc">
+              {items.map((item) => (
                 <WorkspaceRow
                   key={`${item.label}-${item.href ?? 'local'}`}
                   item={item}
@@ -254,7 +243,7 @@ export function Sidebar() {
               ))}
             </SidebarSection>
 
-            <SidebarSection title="Pinned Challenge">
+            <SidebarSection title="Challenge đã ghim">
               {pinnedChallenges.map((item) => (
                 <WorkspaceRow
                   key={item.label}
@@ -267,7 +256,7 @@ export function Sidebar() {
           </>
         ) : (
           <div className="space-y-1 py-1">
-            {workspaceItems.map((item) => (
+            {items.map((item) => (
               <WorkspaceRow
                 key={`${item.label}-${item.href ?? 'local'}`}
                 item={item}
@@ -292,7 +281,7 @@ export function Sidebar() {
         {sidebarOpen ? (
           <div className="space-y-0.5">
             <WorkspaceRow
-              item={{ label: 'Settings', icon: 'settings' }}
+              item={{ label: 'Cài đặt', icon: 'settings' }}
               pathname={pathname}
               sidebarOpen={sidebarOpen}
             />
@@ -302,15 +291,14 @@ export function Sidebar() {
               className="flex h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-md font-medium text-foreground-secondary transition-colors hover:bg-background-tertiary hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
             >
               <MenuIcon className="h-[22px] w-[22px] shrink-0" />
-              <span>Collapse Sidebar</span>
+              <span>Thu gọn</span>
             </button>
           </div>
         ) : (
           <div className="space-y-1">
-            {/* Bỏ Bookmarks/Notifications trùng lặp — đã có trong danh sách Workspace phía trên */}
             <button
               type="button"
-              title="Settings"
+              title="Cài đặt"
               className="flex h-11 w-full items-center justify-center rounded-lg text-foreground-secondary transition-colors hover:bg-background-tertiary hover:text-foreground"
             >
               <SettingsIcon className="h-5 w-5" />
@@ -318,7 +306,7 @@ export function Sidebar() {
             <button
               type="button"
               onClick={toggleSidebar}
-              title="Expand Sidebar"
+              title="Mở rộng sidebar"
               className="relative flex h-11 w-full items-center justify-center rounded-lg text-foreground-secondary transition-colors hover:bg-background-tertiary hover:text-foreground"
             >
               <MenuIcon className="h-[22px] w-[22px]" />

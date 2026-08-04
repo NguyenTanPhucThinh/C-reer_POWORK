@@ -17,13 +17,13 @@ export function ProfileAnalytics({ profile }: ProfileAnalyticsProps) {
       className="rounded-[24px] border-hairline border-border-secondary bg-background-secondary p-5  md:p-6"
     >
       <div className="mb-4">
-        <p className="mb-1 text-xs font-medium text-accent">Statistics</p>
-        <h2 className="text-2xl font-semibold text-foreground">Career analytics</h2>
+        <p className="mb-1 text-xs font-medium text-accent">Thống kê</p>
+        <h2 className="text-2xl font-semibold text-foreground">Phân tích sự nghiệp</h2>
       </div>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <div>
-          <p className="mb-3 text-sm font-medium text-foreground-secondary">Skill distribution</p>
+          <p className="mb-3 text-sm font-medium text-foreground-secondary">Phân bổ kỹ năng</p>
           <div className="space-y-3">
             {profile.skillSummary.map((skill) => {
               const percent =
@@ -48,7 +48,9 @@ export function ProfileAnalytics({ profile }: ProfileAnalyticsProps) {
         </div>
 
         <div>
-          <p className="mb-3 text-sm font-medium text-foreground-secondary">Evidence momentum</p>
+          <p className="mb-3 text-sm font-medium text-foreground-secondary">
+            Đà phát triển bằng chứng
+          </p>
           <div className="space-y-3">
             {evidenceScores.map((evidence) => {
               const percent =
