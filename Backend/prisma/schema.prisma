@@ -16,13 +16,14 @@ datasource db {
 // ══════════════════════════════════════════════════════
 
 model User {
-  id           String   @id @default(uuid()) @map("user_id")
-  email        String   @unique
-  passwordHash String   @map("password_hash")
-  fullName     String   @map("full_name")
+  id           String    @id @default(uuid()) @map("user_id")
+  email        String    @unique
+  passwordHash String?   @map("password_hash")  // nullable — Google user không có password
+  fullName     String    @map("full_name")
   role         UserRole
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  googleId     String?   @unique @map("google_id")  // null nếu đăng ký bằng email/password
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
 
   company Company?
 
@@ -195,4 +196,5 @@ model TalentPool {
 enum TalentPoolStatus {
   IN_POOL
   INVITED
+  CONSIDERING
 }

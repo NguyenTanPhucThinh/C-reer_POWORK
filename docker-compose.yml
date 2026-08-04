@@ -64,6 +64,7 @@ services:
   # 4. Dịch vụ MinIO (Object Storage)
   minio:
     image: minio/minio
+    platform: linux/amd64
     container_name: powork_minio
     restart: unless-stopped
     ports:

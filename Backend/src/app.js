@@ -10,6 +10,7 @@ import challengeRoutes from './challenge/routes/challenge.routes.js'
 import assessmentRoutes from './assessment/routes/submission.routes.js'
 import profileRoutes from './profile/routes/profile.routes.js'
 import talentPoolRoutes from './talent-pool/routes/talent-pool.route.js'
+import passport from './shared/config/passport.js'
 
 const app = express()
 
@@ -24,6 +25,7 @@ app.use(
 app.use(morgan('dev'))
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
+app.use(passport.initialize())
 
 // ─── Health Check ─────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
