@@ -9,13 +9,20 @@ const start = async () => {
     await prisma.$connect()
     console.log('✅ Database connected')
   } catch (err) {
-    console.warn('⚠️  Database not available - readiness will report degraded:', err.message)
+    console.error('❌ Database not available - backend cannot start:', err.message)
+    process.exit(1)
   }
 
   try {
     await ensureBucketExists()
   } catch (err) {
-    console.warn('⚠️  MinIO not available - readiness will report degraded:', err.message)
+    console.error('❌ MinIO not available - backend cannot start:', err.message)
+    process.exit(1)
+  }
+
+  if (config.nodeEnv === 'production' && !config.jwt.secret) {
+    console.error('❌ JWT_SECRET is required in production')
+    process.exit(1)
   }
 
   app.listen(config.port, () => {
