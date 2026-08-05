@@ -22,7 +22,8 @@ const readinessProbeTimeoutMs = 4000
 const withTimeout = (promise, timeoutLabel) =>
   new Promise((resolve) => {
     const timeoutId = setTimeout(() => {
-      resolve({ ready: false, error: `${timeoutLabel}_timeout` })
+      console.error(`[health] ${timeoutLabel} probe timed out after ${readinessProbeTimeoutMs}ms`)
+      resolve({ ready: false })
     }, readinessProbeTimeoutMs)
 
     promise
@@ -32,7 +33,8 @@ const withTimeout = (promise, timeoutLabel) =>
       })
       .catch((error) => {
         clearTimeout(timeoutId)
-        resolve({ ready: false, error: error.message })
+        console.error(`[health] ${timeoutLabel} probe failed`, error)
+        resolve({ ready: false })
       })
   })
 
@@ -42,7 +44,7 @@ app.use(
   cors({
     origin: config.clientUrl,
     credentials: true,
-  })
+  }),
 )
 app.use(morgan('dev'))
 app.use(express.json())
@@ -53,11 +55,35 @@ app.use(passport.initialize())
 app.get('/health', async (req, res) => {
   const [databaseResult, minioResult, clamavResult] = await Promise.all([
     withTimeout(
-      prisma.$queryRawUnsafe('SELECT 1').then(() => ({ ready: true, error: null })).catch((error) => ({ ready: false, error: error.message })),
-      'database'
+      prisma
+        .$queryRawUnsafe('SELECT 1')
+        .then(() => ({ ready: true }))
+        .catch((error) => {
+          console.error('[health] database probe failed', error)
+          return { ready: false }
+        }),
+      'database',
     ),
-    withTimeout(checkMinioReady(), 'minio'),
-    withTimeout(checkClamavReady(), 'clamav'),
+    withTimeout(
+      checkMinioReady().then((result) => {
+        if (!result.ready) {
+          console.error('[health] minio probe failed', result.error)
+        }
+
+        return { ready: result.ready }
+      }),
+      'minio',
+    ),
+    withTimeout(
+      checkClamavReady().then((result) => {
+        if (!result.ready) {
+          console.error('[health] clamav probe failed', result.error)
+        }
+
+        return { ready: result.ready }
+      }),
+      'clamav',
+    ),
   ])
 
   const ready = databaseResult.ready && minioResult.ready && clamavResult.ready
@@ -67,9 +93,9 @@ app.get('/health', async (req, res) => {
     service: 'powork-backend',
     timestamp: new Date().toISOString(),
     checks: {
-      database: databaseResult,
-      minio: minioResult,
-      clamav: clamavResult,
+      database: databaseResult.ready ? 'ready' : 'degraded',
+      minio: minioResult.ready ? 'ready' : 'degraded',
+      clamav: clamavResult.ready ? 'ready' : 'degraded',
     },
   })
 })

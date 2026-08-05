@@ -4,12 +4,12 @@
  */
 import passport from 'passport'
 import {
-	createGoogleStrategy,
-	isGoogleOAuthConfigured,
+  createGoogleStrategy,
+  isGoogleOAuthConfigured,
 } from '../../iam/strategies/google.strategy.js'
 
 if (isGoogleOAuthConfigured) {
-	passport.use(createGoogleStrategy())
+  passport.use(createGoogleStrategy())
 }
 
 // Không dùng session (dùng JWT stateless) → serialize/deserialize là no-op
