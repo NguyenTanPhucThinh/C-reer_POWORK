@@ -9,13 +9,13 @@ const start = async () => {
     await prisma.$connect()
     console.log('✅ Database connected')
   } catch (err) {
-    console.warn('⚠️  Database not available - running in MOCK mode:', err.message)
+    console.warn('⚠️  Database not available - readiness will report degraded:', err.message)
   }
 
   try {
     await ensureBucketExists()
   } catch (err) {
-    console.warn('⚠️  MinIO not available — presigned-url endpoint sẽ lỗi:', err.message)
+    console.warn('⚠️  MinIO not available - readiness will report degraded:', err.message)
   }
 
   app.listen(config.port, () => {

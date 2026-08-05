@@ -26,3 +26,19 @@ export const getClamScan = async () => {
 
   return clamscanInstance
 }
+
+export const checkClamavReady = async () => {
+  try {
+    await getClamScan()
+
+    return {
+      ready: true,
+      error: null,
+    }
+  } catch (error) {
+    return {
+      ready: false,
+      error: error.message,
+    }
+  }
+}

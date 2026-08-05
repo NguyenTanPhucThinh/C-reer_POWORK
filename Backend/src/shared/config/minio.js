@@ -22,4 +22,30 @@ export const ensureBucketExists = async () => {
   }
 }
 
+export const checkMinioReady = async () => {
+  if (!config.minio.endpoint || !config.minio.accessKey || !config.minio.secretKey) {
+    return {
+      ready: false,
+      bucketExists: false,
+      error: 'missing_minio_configuration',
+    }
+  }
+
+  try {
+    const bucketExists = await minioClient.bucketExists(config.minio.bucket)
+
+    return {
+      ready: bucketExists,
+      bucketExists,
+      error: bucketExists ? null : 'bucket_missing',
+    }
+  } catch (error) {
+    return {
+      ready: false,
+      bucketExists: false,
+      error: error.message,
+    }
+  }
+}
+
 export default minioClient
