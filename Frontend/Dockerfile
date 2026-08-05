@@ -8,7 +8,9 @@ RUN npm ci
 
 # Stage 2: Build mã nguồn
 FROM base AS builder
+# Browser-facing API URL for client-side requests.
 ARG NEXT_PUBLIC_API_URL=http://localhost:3001
+# Internal Docker URL for server-side rendering.
 ARG INTERNAL_API_URL=http://backend:3001
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 ENV INTERNAL_API_URL=${INTERNAL_API_URL}

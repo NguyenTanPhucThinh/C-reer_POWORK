@@ -49,5 +49,5 @@ export const config = {
     callbackUrl:
       process.env.GOOGLE_CALLBACK_URL || 'http://localhost:3001/api/v1/auth/google/callback',
   },
-  clientUrl: process.env.CLIENT_URL || 'http://localhost:3000', // URL FE để redirect sau OAuth
+  clientUrl: process.env.CLIENT_URL || process.env.FRONTEND_URL || 'http://localhost:3000',
 }

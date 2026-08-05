@@ -14,6 +14,7 @@ import assessmentRoutes from './assessment/routes/submission.routes.js'
 import profileRoutes from './profile/routes/profile.routes.js'
 import talentPoolRoutes from './talent-pool/routes/talent-pool.route.js'
 import passport from './shared/config/passport.js'
+import { config } from './shared/config/index.js'
 
 const app = express()
 const readinessProbeTimeoutMs = 4000
@@ -39,7 +40,7 @@ const withTimeout = (promise, timeoutLabel) =>
 app.use(helmet())
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: config.clientUrl,
     credentials: true,
   }),
 )

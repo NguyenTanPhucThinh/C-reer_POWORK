@@ -30,8 +30,8 @@ services:
     environment:
       NODE_ENV: production
       PORT: ${PORT:-3001}
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       CLIENT_URL: ${CLIENT_URL:-http://localhost:3000}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       # Sử dụng tên dịch vụ 'postgres' thay vì 'localhost' để kết nối nội bộ giữa các container
       DATABASE_URL: ${DATABASE_URL:-postgresql://powork_user:powork_pass@postgres:5432/powork_db}
       JWT_SECRET: ${JWT_SECRET:-powork_super_secret_dev_2026}
@@ -70,7 +70,9 @@ services:
       context: ./Frontend
       dockerfile: Dockerfile
       args:
+        # Public URL that the browser can reach directly.
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
+        # Internal URL used by server-side rendering inside Docker.
         INTERNAL_API_URL: ${INTERNAL_API_URL:-http://backend:3001}
     container_name: powork_frontend
     restart: unless-stopped
@@ -78,9 +80,9 @@ services:
       - "3000:3000" # Host port 3000 trỏ về container port 3000
     environment:
       NODE_ENV: production
-      # Trỏ Next.js API URL đến Backend chạy ở localhost:3001 dưới góc nhìn của trình duyệt người dùng
+      # Public browser-facing URL.
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
-      # Cấu hình gọi nội mạng Docker cho Server-Side Rendering (SSR) trong Next.js
+      # Internal Docker URL for server-side calls.
       INTERNAL_API_URL: ${INTERNAL_API_URL:-http://backend:3001}
     depends_on:
       backend:
