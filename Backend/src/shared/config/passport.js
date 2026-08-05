@@ -3,7 +3,10 @@
  * Đặt ở shared/ vì Passport là infrastructure dùng chung
  */
 import passport from 'passport'
-import { createGoogleStrategy, isGoogleOAuthConfigured } from '../../iam/strategies/google.strategy.js'
+import {
+	createGoogleStrategy,
+	isGoogleOAuthConfigured,
+} from '../../iam/strategies/google.strategy.js'
 
 if (isGoogleOAuthConfigured) {
 	passport.use(createGoogleStrategy())

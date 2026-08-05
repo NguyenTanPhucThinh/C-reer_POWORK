@@ -42,7 +42,7 @@ app.use(
   cors({
     origin: config.clientUrl,
     credentials: true,
-  }),
+  })
 )
 app.use(morgan('dev'))
 app.use(express.json())
@@ -53,11 +53,8 @@ app.use(passport.initialize())
 app.get('/health', async (req, res) => {
   const [databaseResult, minioResult, clamavResult] = await Promise.all([
     withTimeout(
-      prisma
-      .$queryRawUnsafe('SELECT 1')
-      .then(() => ({ ready: true, error: null }))
-      .catch((error) => ({ ready: false, error: error.message })),
-      'database',
+      prisma.$queryRawUnsafe('SELECT 1').then(() => ({ ready: true, error: null })).catch((error) => ({ ready: false, error: error.message })),
+      'database'
     ),
     withTimeout(checkMinioReady(), 'minio'),
     withTimeout(checkClamavReady(), 'clamav'),
