@@ -31,6 +31,10 @@ services:
       NODE_ENV: production
       PORT: ${PORT:-3001}
       CLIENT_URL: ${CLIENT_URL:-http://localhost:3000}
+      # Google OAuth is enabled only when these values are provided.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL:-http://localhost:3001/api/v1/auth/google/callback}
       # Sử dụng tên dịch vụ 'postgres' thay vì 'localhost' để kết nối nội bộ giữa các container
       DATABASE_URL: ${DATABASE_URL:-postgresql://powork_user:powork_pass@postgres:5432/powork_db}
       JWT_SECRET: ${JWT_SECRET:-}
