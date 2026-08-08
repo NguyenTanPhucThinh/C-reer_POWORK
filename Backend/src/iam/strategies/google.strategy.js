@@ -18,50 +18,53 @@ import { Strategy as GoogleStrategy } from 'passport-google-oauth20'
 import { config } from '../../shared/config/index.js'
 import prisma from '../../shared/config/prisma.js'
 
-export const googleStrategy = new GoogleStrategy(
-  {
-    clientID: config.google.clientId,
-    clientSecret: config.google.clientSecret,
-    callbackURL: config.google.callbackUrl,
-    scope: ['profile', 'email'],
-  },
-  async (accessToken, refreshToken, profile, done) => {
-    try {
-      const email = profile.emails?.[0]?.value
-      const fullName = profile.displayName || 'Google User'
-      const googleId = profile.id
+export const isGoogleOAuthConfigured = Boolean(config.google.clientId && config.google.clientSecret)
 
-      if (!email) {
-        return done(new Error('Không lấy được email từ Google'), null)
-      }
+export const createGoogleStrategy = () =>
+  new GoogleStrategy(
+    {
+      clientID: config.google.clientId,
+      clientSecret: config.google.clientSecret,
+      callbackURL: config.google.callbackUrl,
+      scope: ['profile', 'email'],
+    },
+    async (accessToken, refreshToken, profile, done) => {
+      try {
+        const email = profile.emails?.[0]?.value
+        const fullName = profile.displayName || 'Google User'
+        const googleId = profile.id
 
-      // Tìm user theo email — có thể đã đăng ký bằng email/password trước đó
-      let user = await prisma.user.findUnique({ where: { email } })
+        if (!email) {
+          return done(new Error('Không lấy được email từ Google'), null)
+        }
 
-      if (user) {
-        // User đã tồn tại → cập nhật googleId nếu chưa có, link vào account cũ
-        if (!user.googleId) {
-          user = await prisma.user.update({
-            where: { email },
-            data: { googleId },
+        // Tìm user theo email — có thể đã đăng ký bằng email/password trước đó
+        let user = await prisma.user.findUnique({ where: { email } })
+
+        if (user) {
+          // User đã tồn tại → cập nhật googleId nếu chưa có, link vào account cũ
+          if (!user.googleId) {
+            user = await prisma.user.update({
+              where: { email },
+              data: { googleId },
+            })
+          }
+        } else {
+          // User mới → tạo account, không có password
+          user = await prisma.user.create({
+            data: {
+              email,
+              fullName,
+              passwordHash: null, // Google user không có password
+              role: 'CANDIDATE',
+              googleId,
+            },
           })
         }
-      } else {
-        // User mới → tạo account, không có password
-        user = await prisma.user.create({
-          data: {
-            email,
-            fullName,
-            passwordHash: null, // Google user không có password
-            role: 'Candidate',
-            googleId,
-          },
-        })
-      }
 
-      return done(null, user)
-    } catch (err) {
-      return done(err, null)
-    }
-  },
-)
+        return done(null, user)
+      } catch (err) {
+        return done(err, null)
+      }
+    },
+  )

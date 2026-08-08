@@ -3,9 +3,14 @@
  * Đặt ở shared/ vì Passport là infrastructure dùng chung
  */
 import passport from 'passport'
-import { googleStrategy } from '../../iam/strategies/google.strategy.js'
+import {
+  createGoogleStrategy,
+  isGoogleOAuthConfigured,
+} from '../../iam/strategies/google.strategy.js'
 
-passport.use(googleStrategy)
+if (isGoogleOAuthConfigured) {
+  passport.use(createGoogleStrategy())
+}
 
 // Không dùng session (dùng JWT stateless) → serialize/deserialize là no-op
 passport.serializeUser((user, done) => done(null, user))

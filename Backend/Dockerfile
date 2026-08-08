@@ -3,6 +3,11 @@ FROM node:20-slim AS builder
 
 WORKDIR /app
 
+# Prisma cần OpenSSL trong môi trường build để generate/migrate ổn định
+RUN apt-get update -y \
+	&& apt-get install -y --no-install-recommends openssl ca-certificates \
+	&& rm -rf /var/lib/apt/lists/*
+
 # Copy package files và thư mục prisma để chuẩn bị sinh code
 COPY package*.json ./
 COPY prisma ./prisma
@@ -18,6 +23,10 @@ RUN npx prisma generate
 FROM node:20-slim AS runner
 
 WORKDIR /app
+
+RUN apt-get update -y \
+	&& apt-get install -y --no-install-recommends openssl ca-certificates \
+	&& rm -rf /var/lib/apt/lists/*
 
 ENV NODE_ENV=production
 
