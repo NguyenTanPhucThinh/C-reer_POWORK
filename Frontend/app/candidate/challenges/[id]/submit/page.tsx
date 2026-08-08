@@ -6,29 +6,30 @@ import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { assessmentAPI } from '@/lib/api/endpoints';
-import { SubmissionSummary } from '@/lib/types';
+import type { SubmissionGroup, SubmissionStatus, SubmissionVersion } from '@/lib/types';
 import {
   SubmissionHistory,
   Uploader,
   type SubmissionItem,
-  // type SubmissionStatus, // Removed as we use SubmissionSummary['status']
   type UploadMetadata,
 } from '@/components/submissions';
 import { Badge, Button } from '@/components/ui';
 
-// Map backend status (PascalCase) to frontend labels
-const STATUS_LABELS: Record<SubmissionSummary['status'], string> = {
+const STATUS_LABELS: Record<SubmissionStatus, string> = {
   Pending: 'Đang chờ xử lý',
   Evaluated: 'Đang kiểm tra',
   Approved: 'Đã ghi nhận',
   Rejected: 'Bị từ chối',
-  Failed: 'Bị chặn bảo mật',
-  PENDING: 'Đang chờ xử lý',
-  EVALUATED: 'Đang kiểm tra',
-  APPROVED: 'Đã ghi nhận',
-  REJECTED: 'Bị từ chối',
-  FAILED: 'Bị chặn bảo mật',
 };
+
+const HISTORY_STATUS: Record<SubmissionStatus, SubmissionItem['status']> = {
+  Pending: 'pending',
+  Evaluated: 'processing',
+  Approved: 'accepted',
+  Rejected: 'rejected',
+};
+
+type CandidateSubmission = SubmissionVersion & { hash_id: string };
 
 // This function is still needed to extract challengeId from URL params
 function getChallengeId(params: ReturnType<typeof useParams>): string {
@@ -45,20 +46,28 @@ export default function CandidateChallengeSubmitPage() {
   const challengeId = getChallengeId(useParams());
   const queryClient = useQueryClient();
 
-  const { data: submissions = [], isLoading: isLoadingSubmissions } = useQuery<SubmissionSummary[]>(
-    {
-      queryKey: [challengeId, 'submissions'],
-      queryFn: () => assessmentAPI.listByChallenge(challengeId),
-    }
+  const { data: submissionGroups = [], isLoading: isLoadingSubmissions } = useQuery<
+    SubmissionGroup[]
+  >({
+    queryKey: [challengeId, 'submissions'],
+    queryFn: () => assessmentAPI.listByChallenge(challengeId),
+  });
+
+  const submissions = useMemo<CandidateSubmission[]>(
+    () =>
+      submissionGroups.flatMap((group) =>
+        group.submissions.map((submission) => ({ ...submission, hash_id: group.hash_id }))
+      ),
+    [submissionGroups]
   );
 
   const { mutateAsync: uploadSubmissionMutation, isPending: isUploading } = useMutation({
     mutationFn: async ({ file, metadata }: { file: File; metadata: UploadMetadata }) => {
       // Step 1: Get presigned URL
-      const { upload_url, file_key } = await assessmentAPI.getPresignedUploadUrl({
+      const { upload_url, object_key } = await assessmentAPI.getPresignedUploadUrl({
         challenge_id: challengeId,
-        file_name: metadata.originalFileName,
-        file_type: file.type,
+        filename: metadata.originalFileName,
+        content_type: file.type,
       });
 
       // Step 2: Upload file to MinIO
@@ -71,7 +80,7 @@ export default function CandidateChallengeSubmitPage() {
       // Step 3: Notify backend about submission
       await assessmentAPI.submit({
         challenge_id: challengeId,
-        solution_url: file_key,
+        solution_url: object_key,
       });
     },
     onSuccess: () => {
@@ -194,10 +203,10 @@ export default function CandidateChallengeSubmitPage() {
           fileName: s.solution_url?.split('/').pop() || s.hash_id,
           originalFileName: s.solution_url?.split('/').pop() || s.hash_id,
           submittedAt: new Date(s.submitted_at!),
-          status: s.status.toLowerCase() as SubmissionItem['status'], // Ensure status is lowercase
-          version: 0, // Versioning is not directly in SubmissionSummary, might need backend change or infer
-          fileSize: 0, // Not available in SubmissionSummary, might need backend change
-          note: '', // Not available in SubmissionSummary
+          status: HISTORY_STATUS[s.status],
+          version: s.version,
+          fileSize: 0,
+          note: '',
           downloadUrl: s.solution_url,
         }))}
         onRefresh={handleRefresh}

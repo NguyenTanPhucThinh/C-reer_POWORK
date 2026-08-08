@@ -8,7 +8,8 @@ import type {
   ChallengeSummary,
   CreateChallengeRequest,
   UpdateChallengeStatusRequest,
-  SubmissionSummary,
+  SubmissionReceipt,
+  SubmissionGroup,
   SubmitSolutionRequest,
   EvaluateRequest,
   EvaluateResponse,
@@ -46,9 +47,9 @@ export const challengeAPI = {
 // Assessment Module — /api/v1/assessment (Khu vực cách ly Blind Audition)
 export const assessmentAPI = {
   submit: (payload: SubmitSolutionRequest) =>
-    unwrap<SubmissionSummary>(apiClient.post('/assessment/submissions', payload)),
+    unwrap<SubmissionReceipt>(apiClient.post('/assessment/submissions', payload)),
   listByChallenge: (challengeId: string) =>
-    unwrap<SubmissionSummary[]>(apiClient.get(`/assessment/challenges/${challengeId}/submissions`)),
+    unwrap<SubmissionGroup[]>(apiClient.get(`/assessment/challenges/${challengeId}/submissions`)),
   evaluate: (submissionId: string, payload: EvaluateRequest) =>
     unwrap<EvaluateResponse>(
       apiClient.post(`/assessment/submissions/${submissionId}/evaluate`, payload)
@@ -59,7 +60,9 @@ export const assessmentAPI = {
     ),
   getPresignedUploadUrl: (payload: GetPresignedUploadUrlRequest) =>
     unwrap<GetPresignedUploadUrlResponse>(
-      apiClient.post(`/assessment/submissions/presigned-url`, payload)
+      apiClient.get(`/assessment/challenges/${payload.challenge_id}/presigned-url`, {
+        params: { filename: payload.filename, content_type: payload.content_type },
+      })
     ),
 };
 

@@ -10,9 +10,17 @@ export const evaluateSubmission = async (
   // Lấy bài nộp
   const submission = await prisma.submission.findUnique({
     where: { id: submissionId },
+    include: { identityMapping: true },
   })
 
   if (!submission) throw new AppError('Không tìm thấy submission', 404, 'ASSESS_002')
+  if (submission.identityMapping.isUnlocked) {
+    throw new AppError(
+      'Cannot evaluate. This submission has already been unlocked and frozen.',
+      403,
+      'ASSESS_006',
+    )
+  }
 
   // Lấy thử thách để kiểm tra quyền sở hữu của công ty
   const challenge = await prisma.challenge.findUnique({

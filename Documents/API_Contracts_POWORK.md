@@ -44,14 +44,16 @@ Tài liệu này quy định chi tiết các API Contracts thuộc phạm vi MVP
   ```json
   {
     "status": "success",
-    "message": "User registered successfully",
     "data": {
+      "access_token": "eyJhbG...",
+      "token_type": "Bearer",
       "user": {
         "user_id": "de305d54-75b4-431b-adb2-eb6b9e546014",
         "email": "phong.dt@gmail.com",
         "full_name": "Đoàn Tấn Phong",
         "role": "Candidate",
-        "company_id": "null hoặc UUID nếu là Employer"
+        "company_id": "null hoặc UUID nếu là Employer",
+        "created_at": "2026-06-01T08:00:00.000Z"
       }
     }
   }
@@ -78,8 +80,11 @@ Tài liệu này quy định chi tiết các API Contracts thuộc phạm vi MVP
       "token_type": "Bearer",
       "user": {
         "user_id": "de305d54-75b4-431b-adb2-eb6b9e546014",
+        "email": "phong.dt@gmail.com",
         "full_name": "Đoàn Tấn Phong",
-        "role": "Candidate"
+        "role": "Candidate",
+        "company_id": null,
+        "created_at": "2026-06-01T08:00:00.000Z"
       }
     }
   }
@@ -115,7 +120,31 @@ Tài liệu này quy định chi tiết các API Contracts thuộc phạm vi MVP
     ]
   }
   ```
-- **Response (201 Created):** Trả về object challenge vừa tạo kèm list criteria có `criteria_id` (UUID).
+- **Response (201 Created):** Trả về object challenge vừa tạo kèm list criteria có `criteria_id` (UUID). Tất cả field JSON dùng `snake_case`; status dùng Title Case.
+  ```json
+  {
+    "status": "success",
+    "data": {
+      "challenge_id": "403bf47b-231a-4d22-9214-722a4669812a",
+      "title": "Tối ưu Thuật toán Xử lý Bản đồ",
+      "description": "Mô tả chi tiết...",
+      "industry": "Công nghệ thông tin",
+      "company_name": "MTech Solutions",
+      "deadline": "2026-06-30T23:59:59.000Z",
+      "status": "Open",
+      "rubrics": [
+        {
+          "criteria_id": "aa152d43-014b-4892-ba21-cb9e443101d2",
+          "criteria_name": "Kiến trúc mã nguồn",
+          "weight": 40,
+          "max_score": 10
+        }
+      ],
+      "created_at": "2026-06-01T08:00:00.000Z",
+      "updated_at": "2026-06-01T08:00:00.000Z"
+    }
+  }
+  ```
 
 #### [GET] `/api/v1/challenges`
 
@@ -133,6 +162,33 @@ Tài liệu này quy định chi tiết các API Contracts thuộc phạm vi MVP
         "deadline": "2026-06-30T23:59:59Z"
       }
     ]
+  }
+  ```
+
+#### [GET] `/api/v1/challenges/{challenge_id}`
+
+- **Mô tả:** Lấy chi tiết một challenge. Response dùng cùng field với object trả về khi tạo challenge.
+- **Response (200 OK):** `data` gồm `challenge_id`, `title`, `description`, `industry`, `company_name`, `deadline`, `status`, `rubrics`, `created_at` và `updated_at`.
+
+#### [PATCH] `/api/v1/challenges/{challenge_id}/status`
+
+- **Auth:** `Bearer <Employer_Token>`
+- **Request Body:**
+  ```json
+  {
+    "status": "Closed"
+  }
+  ```
+- **Giá trị hợp lệ:** `Open`, `Closed`, `Archived`.
+- **Response (200 OK):**
+  ```json
+  {
+    "status": "success",
+    "data": {
+      "challenge_id": "403bf47b-231a-4d22-9214-722a4669812a",
+      "status": "Closed",
+      "updated_at": "2026-06-15T08:00:00.000Z"
+    }
   }
   ```
 
@@ -233,6 +289,25 @@ Tài liệu này quy định chi tiết các API Contracts thuộc phạm vi MVP
     "general_comment": "Bài làm xuất sắc"
   }
   ```
+- **Response (201 Created):**
+  ```json
+  {
+    "status": "success",
+    "data": {
+      "submission_id": "f5e921dd-14bb-421c-a32e-11bc9aef4421",
+      "evaluations": [
+        {
+          "criteria_id": "aa152d43-014b-4892-ba21-cb9e443101d2",
+          "score": 8.5,
+          "comment": "Tốt"
+        }
+      ],
+      "general_comment": "Bài làm xuất sắc",
+      "total_score": 8.5,
+      "evaluated_at": "2026-06-10T03:00:00.000Z"
+    }
+  }
+  ```
 - **Response (403 Forbidden):** Trả về khi hồ sơ đã được Unlock (Đóng băng điểm số).
   ```json
   {
@@ -256,11 +331,13 @@ Tài liệu này quy định chi tiết các API Contracts thuộc phạm vi MVP
   ```json
   {
     "status": "success",
-    "message": "Identity unlocked.",
-    "unlocked_candidate_profile": {
-      "user_id": "de305d54-...",
-      "full_name": "Đoàn Tấn Phong",
-      "email": "phong.dt@gmail.com"
+    "data": {
+      "message": "Identity unlocked successfully.",
+      "unlocked_candidate_profile": {
+        "user_id": "de305d54-...",
+        "full_name": "Đoàn Tấn Phong",
+        "email": "phong.dt@gmail.com"
+      }
     }
   }
   ```

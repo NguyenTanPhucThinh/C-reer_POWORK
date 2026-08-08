@@ -14,14 +14,39 @@ import * as companyService from '../../iam/services/company.service.js' // Inter
 export const getChallenges = async (req, res) => {
   const { industry } = req.query
   const challenges = await challengeService.getChallenges({ industry })
-  return sendSuccess(res, challenges)
+  return sendSuccess(
+    res,
+    challenges.map((challenge) => ({
+      challenge_id: challenge.challengeId,
+      title: challenge.title,
+      company_name: challenge.companyName,
+      industry: challenge.industry,
+      deadline: challenge.deadline,
+    })),
+  )
 }
 
 // GET /api/v1/challenges/:challenge_id
 export const getChallengeById = async (req, res) => {
-  const { challengeId } = req.params
+  const { challenge_id: challengeId } = req.params
   const challenge = await challengeService.getChallengeById(challengeId)
-  return sendSuccess(res, challenge)
+  return sendSuccess(res, {
+    challenge_id: challenge.challengeId,
+    title: challenge.title,
+    description: challenge.description,
+    industry: challenge.industry,
+    company_name: challenge.companyName,
+    deadline: challenge.deadline,
+    status: `${challenge.status[0]}${challenge.status.slice(1).toLowerCase()}`,
+    rubrics: challenge.rubrics.map((rubric) => ({
+      criteria_id: rubric.criteriaId,
+      criteria_name: rubric.criteriaName,
+      weight: rubric.weight,
+      max_score: rubric.maxScore,
+    })),
+    created_at: challenge.createdAt,
+    updated_at: challenge.updatedAt,
+  })
 }
 
 // POST /api/v1/challenges
@@ -32,21 +57,52 @@ export const createChallenge = async (req, res) => {
     await companyService.getCompanyByUserId(req.user.userId)
 
   const challenge = await challengeService.createChallenge({
-    employerUserId: req.user.userId,
-    companyId: companyId,
-    companyName: companyName,
-    payload: req.body,
+    companyId,
+    companyName,
+    title: req.body.title,
+    description: req.body.description,
+    industry: req.body.industry,
+    deadline: req.body.deadline,
+    rubrics: req.body.rubrics.map((rubric) => ({
+      criteriaName: rubric.criteria_name,
+      weight: rubric.weight,
+      maxScore: rubric.max_score,
+    })),
   })
 
-  return sendCreated(res, challenge)
+  return sendCreated(res, {
+    challenge_id: challenge.challengeId,
+    title: challenge.title,
+    description: challenge.description,
+    industry: challenge.industry,
+    company_name: challenge.companyName,
+    deadline: challenge.deadline,
+    status: `${challenge.status[0]}${challenge.status.slice(1).toLowerCase()}`,
+    rubrics: challenge.rubrics.map((rubric) => ({
+      criteria_id: rubric.criteriaId,
+      criteria_name: rubric.criteriaName,
+      weight: rubric.weight,
+      max_score: rubric.maxScore,
+    })),
+    created_at: challenge.createdAt,
+    updated_at: challenge.updatedAt,
+  })
 }
 
 // PATCH /api/v1/challenges/:challenge_id/status
 export const updateChallengeStatus = async (req, res) => {
-  const { challengeId } = req.params
+  const { challenge_id: challengeId } = req.params
   const { status } = req.body
   const { company_id: companyId } = await companyService.getCompanyByUserId(req.user.userId)
 
-  const updated = await challengeService.updateChallengeStatus(challengeId, companyId, status)
-  return sendSuccess(res, updated)
+  const updated = await challengeService.updateChallengeStatus(
+    challengeId,
+    companyId,
+    status.toUpperCase(),
+  )
+  return sendSuccess(res, {
+    challenge_id: updated.challengeId,
+    status: `${updated.status[0]}${updated.status.slice(1).toLowerCase()}`,
+    updated_at: updated.updatedAt,
+  })
 }

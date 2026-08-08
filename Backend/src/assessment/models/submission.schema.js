@@ -31,5 +31,5 @@ export const evaluateSubmissionSchema = z.object({
 
 // POST /assessment/submissions/:submission_id/unlock
 export const unlockSubmissionSchema = z.object({
-  action: z.enum(['APPROVE', 'REJECT']),
+  action: z.literal('APPROVE'),
 })

@@ -63,12 +63,12 @@ export const findSubmissionsByChallengeGroupedByHash = async (challengeId) => {
     },
   })
 
-  // Chỉ trả hash_id + is_unlocked + submissions — KHÔNG có user_id
+  // Chỉ trả mã ẩn danh, trạng thái mở khóa và submissions — KHÔNG có userId
   return mappings
     .filter((m) => m.submissions.length > 0)
     .map((m) => ({
-      hash_id: m.hashId,
-      is_unlocked: m.isUnlocked,
+      hashId: m.hashId,
+      isUnlocked: m.isUnlocked,
       submissions: m.submissions,
     }))
 }
