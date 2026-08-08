@@ -1,16 +1,6 @@
 import type { RubricCriteria } from './challenge';
 
-export type SubmissionStatus =
-  | 'Pending'
-  | 'Evaluated'
-  | 'Approved'
-  | 'Rejected'
-  | 'Failed'
-  | 'PENDING'
-  | 'EVALUATED'
-  | 'APPROVED'
-  | 'REJECTED'
-  | 'FAILED';
+export type SubmissionStatus = 'Pending' | 'Evaluated' | 'Approved' | 'Rejected';
 
 export type DocumentKind = 'pdf' | 'image' | 'zip' | 'unknown';
 
@@ -23,12 +13,26 @@ export interface ReviewDocument {
   description?: string | null;
 }
 
-export interface SubmissionSummary {
+export interface SubmissionReceipt {
   submission_id: string;
   hash_id: string;
+  version: number;
   status: SubmissionStatus;
-  solution_url?: string;
-  submitted_at?: string;
+  submitted_at: string;
+}
+
+export interface SubmissionVersion {
+  submission_id: string;
+  version: number;
+  status: SubmissionStatus;
+  solution_url: string;
+  submitted_at: string;
+}
+
+export interface SubmissionGroup {
+  hash_id: string;
+  is_unlocked: boolean;
+  submissions: SubmissionVersion[];
 }
 
 export interface SubmitSolutionRequest {
@@ -87,11 +91,12 @@ export interface UnlockRequest {
 
 export interface GetPresignedUploadUrlRequest {
   challenge_id: string;
-  file_name: string;
-  file_type: string;
+  filename: string;
+  content_type: string;
 }
 
 export interface GetPresignedUploadUrlResponse {
   upload_url: string;
-  file_key: string;
+  object_key: string;
+  expires_in: number;
 }

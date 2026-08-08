@@ -63,7 +63,7 @@ export const submitSolution = async ({ userId, challengeId, solutionUrl, challen
       console.error('[SubmissionService] Không gửi được email xác nhận:', err.message),
     )
 
-  // 6. Trả về theo đúng API Contracts — TUYỆT ĐỐI không có user_id
+  // 6. Trả dữ liệu nội bộ cho controller — TUYỆT ĐỐI không có userId
   return {
     submissionId: submission.id,
     hashId: submission.hashId,
@@ -77,7 +77,7 @@ export const submitSolution = async ({ userId, challengeId, solutionUrl, challen
 export const getSubmissionsByChallenge = async (challengeId) => {
   const grouped = await submissionRepository.findSubmissionsByChallengeGroupedByHash(challengeId)
 
-  // Format đúng theo API Contracts mới — mỗi hash_id có mảng submissions[]
+  // Mỗi danh tính ẩn danh có một mảng submissions.
   return grouped.map((g) => ({
     hashId: g.hashId,
     isUnlocked: g.isUnlocked,
@@ -92,13 +92,7 @@ export const getSubmissionsByChallenge = async (challengeId) => {
 }
 
 // ─── POST /api/v1/assessment/submissions/:submission_id/unlock ──────────────
-export const unlockCandidate = async (submissionId, action) => {
-  // Nếu hành động không phải là APPROVE (mở khóa), chỉ cần cập nhật trạng thái đơn giản
-  if (action !== 'APPROVE') {
-    const rejected = await submissionRepository.updateSubmissionStatus(submissionId, 'REJECTED')
-    return { message: 'Submission rejected.', submissionId: rejected.id }
-  }
-
+export const unlockCandidate = async (submissionId) => {
   const mappingResult = await prisma.$transaction(async (tx) => {
     // Bước 1: Lấy bài nộp, kèm theo bảng IdentityMapping (để lấy cờ isUnlocked)
     // và bảng Điểm (EvaluationResult) kèm tiêu chí (Criteria) để chuẩn bị copy dữ liệu

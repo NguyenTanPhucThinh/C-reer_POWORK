@@ -5,7 +5,7 @@
  *   [GET] /assessment/challenges/{challenge_id}/presigned-url
  *
  * Flow: FE xin URL tạm → FE tự PUT file thẳng lên MinIO (không qua Backend)
- *       → Backend chỉ trả về object_key để dùng cho bước confirm submission sau
+ *       → Controller trả object_key để dùng cho bước confirm submission sau
  */
 import minioClient from '../../shared/config/minio.js'
 import { config } from '../../shared/config/index.js'
@@ -23,8 +23,8 @@ export const generatePresignedUploadUrl = async ({ userId, challengeId, filename
   )
 
   return {
-    upload_url: uploadUrl,
-    object_key: objectKey,
-    expires_in: config.minio.presignedExpirySeconds,
+    uploadUrl,
+    objectKey,
+    expiresIn: config.minio.presignedExpirySeconds,
   }
 }

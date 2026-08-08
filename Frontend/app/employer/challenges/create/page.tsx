@@ -3,8 +3,8 @@
 import React, { useState } from 'react';
 import { RubricBuilder } from '@/components/rubric/RubricBuilder';
 import { emptyCriteria } from '@/lib/utils/rubric';
-import api from '@/lib/api/client'; // Assuming there's an api client
-import type { RubricCriteriaInput } from '@/lib/types/challenge';
+import { challengeAPI } from '@/lib/api/endpoints';
+import type { CreateChallengeRequest, RubricCriteriaInput } from '@/lib/types/challenge';
 import { AxiosError } from 'axios';
 
 export default function CreateChallengePage() {
@@ -89,29 +89,17 @@ export default function CreateChallengePage() {
     setError(null);
 
     try {
-      const challengeData = {
+      const challengeData: CreateChallengeRequest = {
         title,
         industry,
         description,
-        deadline, // Assuming deadline is a string in "DD/MM/YYYY" format for now
-        rubrics, // Rubric data from state
-        // Add any other necessary fields
+        deadline: new Date(deadline).toISOString(),
+        rubrics,
       };
 
-      // Use apiClient.post directly and handle the AxiosResponse
-      const response = await api.post('/challenges', challengeData); // Base URL in client.ts is already /api/v1, so just /challenges
-
-      if (response.status === 201 || response.status === 200) {
-        // Assuming 201 for creation, 200 for success
-        setIsPublished(true);
-        console.log('Challenge created successfully:', response.data);
-        // Optionally redirect or show a success message
-      } else {
-        // This block might not be reached if interceptor handles errors.
-        // But it's good to have a fallback.
-        setError(response.data?.message || 'Không thể tạo challenge. Vui lòng thử lại.');
-        console.error('Failed to create challenge:', response.data);
-      }
+      const challenge = await challengeAPI.create(challengeData);
+      setIsPublished(true);
+      console.log('Challenge created successfully:', challenge);
     } catch (err: unknown) {
       // Catch AxiosError
       if (err instanceof AxiosError) {
@@ -155,6 +143,7 @@ export default function CreateChallengePage() {
               Tiêu đề Challenge <span style={{ color: '#e05c5c' }}>*</span>
             </p>
             <input
+              type="datetime-local"
               style={styles.input}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -215,7 +204,6 @@ export default function CreateChallengePage() {
               style={styles.input}
               value={deadline}
               onChange={(e) => setDeadline(e.target.value)}
-              placeholder="30/06/2026"
             />
           </div>
           {error && <p style={{ color: '#e05c5c', marginTop: '10px' }}>{error}</p>}

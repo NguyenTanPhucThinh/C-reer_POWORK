@@ -3,8 +3,8 @@ import type {
   ApiSuccess,
   EvaluateRequest,
   EvaluateResponse,
-  SubmissionSummary,
-  SubmitSolutionRequest,
+  SubmissionGroup,
+  SubmissionReceipt,
   UnlockRequest,
   UnlockResponse,
 } from '@/lib/types';
@@ -18,32 +18,46 @@ const success = <T>(data: T, message?: string): ApiSuccess<T> => ({
   ...(message ? { message } : {}),
 });
 
-const MOCK_SUBMISSION: SubmissionSummary = {
+const MOCK_SUBMISSION: SubmissionReceipt = {
   submission_id: 'f5e921dd-14bb-421c-a32e-11bc9aef4421',
   hash_id: 'Candidate_3941',
+  version: 1,
   status: 'Pending',
-  solution_url: 'https://github.com/mock-candidate/solution',
   submitted_at: new Date().toISOString(),
 };
 
 export const assessmentHandlers = [
-  http.post(`${BASE}/submissions`, async ({ request }) => {
-    const body = (await request.json()) as SubmitSolutionRequest;
+  http.post(`${BASE}/submissions`, () => {
     const hashId = `Candidate_${Math.floor(Math.random() * 9999)
       .toString()
       .padStart(4, '0')}`;
-    const submission: SubmissionSummary = {
+    const submission: SubmissionReceipt = {
       submission_id: `mock-${Date.now()}`,
       hash_id: hashId,
+      version: 1,
       status: 'Pending',
-      solution_url: body.solution_url,
       submitted_at: new Date().toISOString(),
     };
     return HttpResponse.json(success(submission), { status: 201 });
   }),
 
   http.get(`${BASE}/challenges/:challenge_id/submissions`, () => {
-    return HttpResponse.json(success([MOCK_SUBMISSION]), { status: 200 });
+    const groups: SubmissionGroup[] = [
+      {
+        hash_id: MOCK_SUBMISSION.hash_id,
+        is_unlocked: false,
+        submissions: [
+          {
+            submission_id: MOCK_SUBMISSION.submission_id,
+            version: MOCK_SUBMISSION.version,
+            status: MOCK_SUBMISSION.status,
+            solution_url: 'https://github.com/mock-candidate/solution',
+            submitted_at: MOCK_SUBMISSION.submitted_at,
+          },
+        ],
+      },
+    ];
+    return HttpResponse.json(success(groups), { status: 200 });
   }),
 
   http.post(`${BASE}/submissions/:submission_id/evaluate`, async ({ params, request }) => {

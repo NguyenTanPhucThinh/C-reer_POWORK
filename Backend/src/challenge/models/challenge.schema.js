@@ -20,12 +20,12 @@ const rubricItemSchema = z.object({
 
 export const createChallengeSchema = z.object({
   title: z.string().min(1, 'Tên thử thách và Hạn nộp bài là bắt buộc'), // TC_007
-  description: z.string().optional(),
+  description: z.string().min(1, 'description là bắt buộc'),
   industry: z.string().min(1, 'industry là bắt buộc'),
   deadline: z.string().datetime({ message: 'Hạn chót không hợp lệ hoặc đã qua thời hạn' }), // TC_008 (format)
   rubrics: z.array(rubricItemSchema).min(1, 'Bắt buộc phải có ít nhất một tiêu chí chấm điểm'), // TC_006
 })
 
 export const updateChallengeStatusSchema = z.object({
-  status: z.enum(['OPEN', 'CLOSED', 'ARCHIVED']),
+  status: z.enum(['Open', 'Closed', 'Archived']),
 })

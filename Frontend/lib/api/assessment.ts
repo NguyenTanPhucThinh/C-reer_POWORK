@@ -1,6 +1,6 @@
 import { assessmentAPI, challengeAPI } from './endpoints';
 import { MOCK_GRADING_SUBMISSION } from '@/lib/data/mockGradingSubmission';
-import type { GradingSubmission, ReviewDocument, SubmissionSummary } from '@/lib/types';
+import type { GradingSubmission, ReviewDocument, SubmissionVersion } from '@/lib/types';
 
 interface GetGradingSubmissionOptions {
   submissionId: string;
@@ -33,12 +33,8 @@ function getFileNameFromUrl(url: string, fallback: string): string {
   }
 }
 
-function getDocumentsFromSummary(summary: SubmissionSummary): ReviewDocument[] {
-  if (!summary.solution_url) {
-    return [];
-  }
-
-  const fileName = getFileNameFromUrl(summary.solution_url, `${summary.hash_id}-submission`);
+function getDocumentsFromSummary(summary: SubmissionVersion): ReviewDocument[] {
+  const fileName = getFileNameFromUrl(summary.solution_url, `${summary.submission_id}-submission`);
 
   return [
     {
@@ -65,16 +61,20 @@ export async function getGradingSubmission({
       assessmentAPI.listByChallenge(challengeId),
     ]);
 
-    const selectedSubmission =
-      submissions.find((submission) => submission.submission_id === submissionId) ?? submissions[0];
+    const submissionGroup = submissions.find((group) =>
+      group.submissions.some((submission) => submission.submission_id === submissionId)
+    );
+    const selectedSubmission = submissionGroup?.submissions.find(
+      (submission) => submission.submission_id === submissionId
+    );
 
-    if (!selectedSubmission) {
+    if (!submissionGroup || !selectedSubmission) {
       throw new Error('Submission not found for this challenge.');
     }
 
     return {
       submission_id: selectedSubmission.submission_id,
-      hash_id: selectedSubmission.hash_id,
+      hash_id: submissionGroup.hash_id,
       status: selectedSubmission.status,
       challenge_id: challenge.challenge_id,
       challenge_title: challenge.title,
@@ -82,6 +82,7 @@ export async function getGradingSubmission({
       solution_url: selectedSubmission.solution_url,
       criteria: challenge.rubrics,
       documents: getDocumentsFromSummary(selectedSubmission),
+      is_unlocked: submissionGroup.is_unlocked,
       data_source: 'api',
     };
   } catch (error) {
