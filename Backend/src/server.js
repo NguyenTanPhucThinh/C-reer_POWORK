@@ -4,7 +4,20 @@ import { config } from './shared/config/index.js'
 import prisma from './shared/config/prisma.js'
 import { ensureBucketExists } from './shared/config/minio.js'
 
+const knownDevelopmentJwtSecrets = new Set([
+  'powork_super_secret_dev_2026',
+  'your_super_secret_key_here_change_in_production',
+])
+
 const start = async () => {
+  if (
+    config.nodeEnv === 'production' &&
+    (!config.jwt.secret || knownDevelopmentJwtSecrets.has(config.jwt.secret))
+  ) {
+    console.error('JWT_SECRET must be set to a non-development value in production')
+    process.exit(1)
+  }
+
   try {
     await prisma.$connect()
     console.log('✅ Database connected')
@@ -17,11 +30,6 @@ const start = async () => {
     await ensureBucketExists()
   } catch (err) {
     console.error('❌ MinIO not available - backend cannot start:', err.message)
-    process.exit(1)
-  }
-
-  if (config.nodeEnv === 'production' && !config.jwt.secret) {
-    console.error('❌ JWT_SECRET is required in production')
     process.exit(1)
   }
 

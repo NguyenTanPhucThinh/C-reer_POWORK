@@ -3,6 +3,7 @@
  * Dùng để quét file vừa upload lên MinIO trước khi cho phép Employer xem
  */
 import clamscan from 'clamscan'
+import net from 'node:net'
 import { config } from './index.js'
 
 let clamscanInstance = null
@@ -29,7 +30,34 @@ export const getClamScan = async () => {
 
 export const checkClamavReady = async () => {
   try {
-    await getClamScan()
+    await new Promise((resolve, reject) => {
+      const socket = net.createConnection({
+        host: config.clamav.host,
+        port: config.clamav.port,
+      })
+      let response = ''
+      let settled = false
+
+      const finish = (error) => {
+        if (settled) return
+        settled = true
+        socket.destroy()
+        error ? reject(error) : resolve()
+      }
+
+      socket.setEncoding('utf8')
+      socket.setTimeout(3000)
+      socket.once('connect', () => socket.write('PING\n'))
+      socket.on('data', (chunk) => {
+        response += chunk
+        if (response.trim() === 'PONG') finish()
+      })
+      socket.once('timeout', () => finish(new Error('ClamAV PING timed out')))
+      socket.once('error', finish)
+      socket.once('end', () => {
+        if (!settled) finish(new Error(`Unexpected ClamAV response: ${response.trim()}`))
+      })
+    })
 
     return {
       ready: true,

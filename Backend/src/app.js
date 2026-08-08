@@ -55,8 +55,7 @@ app.use(passport.initialize())
 app.get('/health', async (req, res) => {
   const [databaseResult, minioResult, clamavResult] = await Promise.all([
     withTimeout(
-      prisma
-        .$queryRawUnsafe('SELECT 1')
+      prisma.$queryRaw`SELECT 1`
         .then(() => ({ ready: true }))
         .catch((error) => {
           console.error('[health] database probe failed', error)

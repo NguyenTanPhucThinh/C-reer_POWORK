@@ -1,12 +1,6 @@
 import { Router } from 'express'
 import passport from 'passport'
-import {
-  register,
-  login,
-  getMe,
-  googleAuth,
-  googleCallback,
-} from '../controllers/auth.controller.js'
+import { register, login, getMe, googleCallback } from '../controllers/auth.controller.js'
 import { config } from '../../shared/config/index.js'
 import { authenticate } from '../../shared/middlewares/auth.middleware.js'
 import { validateBody } from '../../shared/middlewares/validate.middleware.js'
@@ -41,7 +35,7 @@ if (isGoogleOAuthConfigured) {
     '/google/callback',
     passport.authenticate('google', {
       session: false,
-      failureRedirect: `${process.env.CLIENT_URL || 'http://localhost:3000'}/auth/login?error=google_failed`,
+      failureRedirect: `${config.clientUrl}/auth/login?error=google_failed`,
     }),
     googleCallback,
   )

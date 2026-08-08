@@ -13,7 +13,11 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-powork_user} -d ${POSTGRES_DB:-powork_db}" ]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-powork_user} -d ${POSTGRES_DB:-powork_db}",
+        ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -28,7 +32,7 @@ services:
     ports:
       - "3001:3001" # Host port 3001 trỏ về container port 3001
     environment:
-      NODE_ENV: production
+      NODE_ENV: ${NODE_ENV:-development}
       PORT: ${PORT:-3001}
       CLIENT_URL: ${CLIENT_URL:-http://localhost:3000}
       # Google OAuth is enabled only when these values are provided.
@@ -37,7 +41,7 @@ services:
       GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL:-http://localhost:3001/api/v1/auth/google/callback}
       # Sử dụng tên dịch vụ 'postgres' thay vì 'localhost' để kết nối nội bộ giữa các container
       DATABASE_URL: ${DATABASE_URL:-postgresql://powork_user:powork_pass@postgres:5432/powork_db}
-      JWT_SECRET: ${JWT_SECRET:-}
+      JWT_SECRET: ${JWT_SECRET:-powork_super_secret_dev_2026}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
       MINIO_ENDPOINT: ${MINIO_ENDPOINT:-minio}
       MINIO_PORT: ${MINIO_PORT:-9000}
@@ -58,7 +62,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "node -e \"fetch('http://127.0.0.1:3001/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))\"",
+          'node -e "fetch(''http://127.0.0.1:3001/health'').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"',
         ]
       interval: 10s
       timeout: 5s
@@ -67,7 +71,7 @@ services:
       postgres:
         condition: service_healthy # Chỉ chạy Backend khi PostgreSQL đã hoàn toàn sẵn sàng
       minio:
-        condition: service_healthy
+        condition: service_started
       clamav:
         condition: service_healthy
 
@@ -105,17 +109,11 @@ services:
       - "9000:9000"
       - "9001:9001"
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-admin123}
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-admin123}
     command: server /data --console-address ":9001"
     volumes:
       - minio_data:/data
-    healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
 
   clamav:
     image: clamav/clamav
@@ -123,12 +121,6 @@ services:
     restart: unless-stopped
     ports:
       - "3310:3310"
-    healthcheck:
-      test: ["CMD-SHELL", "printf 'PING\\n' | nc -w 3 127.0.0.1 3310 | grep -q PONG"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 60s
 
 volumes:
   postgres_data:
