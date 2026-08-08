@@ -5,16 +5,25 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
+import type { UserRole } from '@/lib/types';
 
-export function DashboardShell({ children }: { children: React.ReactNode }) {
+export function DashboardShell({
+  children,
+  allowedRole,
+}: {
+  children: React.ReactNode;
+  allowedRole?: UserRole;
+}) {
   const router = useRouter();
   const { status, user } = useAuth();
 
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.replace('/login');
+    } else if (status === 'authenticated' && user && allowedRole && user.role !== allowedRole) {
+      router.replace(user.role === 'Employer' ? '/employer/dashboard' : '/candidate/dashboard');
     }
-  }, [status, router]);
+  }, [allowedRole, status, router, user]);
 
   // Retint toàn workspace theo vai trò: candidate = xanh lá, employer = vàng cam tối
   useEffect(() => {
@@ -26,7 +35,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     };
   }, [user]);
 
-  if (status !== 'authenticated') {
+  if (status !== 'authenticated' || (allowedRole && user?.role !== allowedRole)) {
     return (
       <div className="flex h-screen items-center justify-center bg-background text-foreground-secondary">
         Đang tải...

@@ -1,20 +1,14 @@
-import type { LoginRequest, RegisterRequest, User } from '@/lib/types';
+import type {
+  ApiErrorBody,
+  ApiSuccess,
+  AuthSession,
+  LoginRequest,
+  RegisterRequest,
+  User,
+} from '@/lib/types';
 
-/**
- * Tầng "upstream" cho auth, chạy phía server (trong Route Handler).
- *
- * GIAI ĐOẠN HIỆN TẠI: trả mock data inline, KHÔNG cần MSW server-side.
- * KHI CÓ BACKEND THẬT: chỉ cần đổi ruột mỗi hàm dưới đây thành fetch() lên BE,
- * ví dụ:
- *   const res = await fetch(`${process.env.API_URL}/api/v1/auth/login`, {
- *     method: 'POST', headers: { 'Content-Type': 'application/json' },
- *     body: JSON.stringify(payload),
- *   });
- *   const body = await res.json();
- *   return { token: body.data.access_token, user: body.data.user };
- *
- * Phần Route Handler và phía client KHÔNG phải đổi gì khi swap.
- */
+const UPSTREAM_API_URL =
+  process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 export interface UpstreamSession {
   token: string;
@@ -32,70 +26,76 @@ export class AuthError extends Error {
   }
 }
 
-// ─── MOCK STATE (xoá khi nối BE thật) ────────────────────────────────────────
+async function requestUpstream<T>(
+  path: string,
+  init: RequestInit = {},
+  token?: string
+): Promise<T> {
+  const headers = new Headers(init.headers);
+  headers.set('accept', 'application/json');
+  if (init.body) headers.set('content-type', 'application/json');
+  if (token) headers.set('authorization', `Bearer ${token}`);
 
-const MOCK_USER: User = {
-  user_id: 'de305d54-75b4-431b-adb2-eb6b9e546014',
-  email: 'test@example.com',
-  full_name: 'Trương Minh Quang',
-  role: 'Candidate',
-};
+  let response: Response;
+  try {
+    response = await fetch(new URL(path, UPSTREAM_API_URL), {
+      ...init,
+      headers,
+      cache: 'no-store',
+      signal: AbortSignal.timeout(10_000),
+    });
+  } catch {
+    throw new AuthError(502, 'UPSTREAM_UNAVAILABLE', 'Backend đăng nhập không khả dụng.');
+  }
 
-/**
- * Bản đồ token -> user, tồn tại trong RAM của tiến trình Next (dev server là
- * một tiến trình duy nhất nên map sống xuyên suốt phiên dev). Nhờ vậy /me trả
- * đúng user vừa đăng nhập mà không cần lưu gì ở client. Reset khi restart server.
- */
-const mockSessions = new Map<string, User>();
+  let body: ApiSuccess<T> | ApiErrorBody;
+  try {
+    body = (await response.json()) as ApiSuccess<T> | ApiErrorBody;
+  } catch {
+    throw new AuthError(502, 'UPSTREAM_INVALID_RESPONSE', 'Backend trả về dữ liệu không hợp lệ.');
+  }
 
-function issueMockToken(user: User): string {
-  // Token mock dạng chuỗi; BE thật sẽ trả JWT.
-  const token = `mock.${user.role}.${user.user_id}.${mockSessions.size + 1}`;
-  mockSessions.set(token, user);
-  return token;
+  if (!response.ok || body.status === 'error') {
+    const error = body as ApiErrorBody;
+    throw new AuthError(
+      response.status,
+      error.error_code || 'AUTH_ERROR',
+      error.message || 'Không thể xác thực người dùng.'
+    );
+  }
+
+  return body.data;
 }
 
-// ─── API ─────────────────────────────────────────────────────────────────────
+const toUpstreamSession = (session: AuthSession): UpstreamSession => ({
+  token: session.access_token,
+  user: session.user,
+});
 
 export async function loginUpstream(payload: LoginRequest): Promise<UpstreamSession> {
-  // MOCK: chấp nhận test@example.com / password, các email khác tạo user tạm.
-  if (payload.email === 'test@example.com' && payload.password !== 'password') {
-    throw new AuthError(401, 'AUTH_001', 'Sai email hoặc mật khẩu');
-  }
-  const role = payload.role ?? 'Candidate';
-  const user: User =
-    payload.email === 'test@example.com'
-      ? { ...MOCK_USER, email: payload.email, role }
-      : {
-          user_id: `mock-${payload.email}`,
-          email: payload.email,
-          full_name: payload.email.split('@')[0],
-          role,
-        };
-  return { token: issueMockToken(user), user };
+  const session = await requestUpstream<AuthSession>('/api/v1/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email: payload.email, password: payload.password }),
+  });
+  return toUpstreamSession(session);
 }
 
 export async function registerUpstream(payload: RegisterRequest): Promise<UpstreamSession> {
-  // MOCK: luôn tạo thành công.
-  const user: User = {
-    user_id: `mock-${payload.email}`,
-    email: payload.email,
-    full_name: payload.full_name,
-    role: payload.role,
-  };
-  return { token: issueMockToken(user), user };
+  const session = await requestUpstream<AuthSession>('/api/v1/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return toUpstreamSession(session);
 }
 
 export async function meUpstream(token: string): Promise<User> {
-  // MOCK: tra cứu trong map; nếu không thấy (vd server vừa restart) thì coi như
-  // token không hợp lệ để client tự đăng nhập lại.
-  const user = mockSessions.get(token);
-  if (!user) {
-    throw new AuthError(401, 'AUTH_002', 'Phiên đăng nhập không hợp lệ');
-  }
-  return user;
+  return requestUpstream<User>('/api/v1/auth/me', {}, token);
 }
 
-export async function logoutUpstream(token: string): Promise<void> {
-  mockSessions.delete(token);
+export async function exchangeGoogleCode(code: string): Promise<UpstreamSession> {
+  const session = await requestUpstream<AuthSession>('/api/v1/auth/google/exchange', {
+    method: 'POST',
+    body: JSON.stringify({ code }),
+  });
+  return toUpstreamSession(session);
 }

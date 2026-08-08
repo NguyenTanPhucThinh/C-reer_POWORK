@@ -9,6 +9,8 @@ import { useAuth } from '@/lib/hooks/useAuth';
 import { loginSchema, type LoginFormValues } from '@/lib/validations/auth';
 import type { UserRole } from '@/lib/types';
 
+const GOOGLE_AUTH_URL = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/v1/auth/google`;
+
 function getSafeRedirect(value: string | null) {
   if (!value || !value.startsWith('/') || value.startsWith('//')) {
     return null;
@@ -56,6 +58,21 @@ function getDashboardForRole(role: UserRole) {
   return role === 'Employer' ? '/employer/dashboard' : '/candidate/dashboard';
 }
 
+function getRedirectForRole(redirectPath: string | null, role: UserRole) {
+  if (!redirectPath) return getDashboardForRole(role);
+  if (
+    (redirectPath.startsWith('/employer') ||
+      redirectPath.startsWith('/talent-pool') ||
+      redirectPath.startsWith('/submissions')) &&
+    role !== 'Employer'
+  ) {
+    return getDashboardForRole(role);
+  }
+  if (redirectPath.startsWith('/candidate') && role !== 'Candidate')
+    return getDashboardForRole(role);
+  return redirectPath;
+}
+
 export default function LoginContent() {
   const router = useRouter();
   const { login } = useAuth();
@@ -92,7 +109,10 @@ export default function LoginContent() {
     defaultValues: { email: '', password: '' },
   });
 
-  const [error, setError] = useState('');
+  const oauthError = searchParams.get('error');
+  const [error, setError] = useState(
+    oauthError ? 'Đăng nhập Google không thành công. Vui lòng thử lại.' : ''
+  );
   const [showPassword, setShowPassword] = useState(false);
 
   const selectRole = (role: UserRole) => {
@@ -107,8 +127,8 @@ export default function LoginContent() {
     setError('');
 
     try {
-      await login({ ...data, role: selectedRole });
-      router.replace(getDashboardForRole(selectedRole));
+      const user = await login({ ...data, role: selectedRole });
+      router.replace(getRedirectForRole(redirectPath, user.role));
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string } } };
       setError(axiosErr?.response?.data?.message || 'Email hoặc mật khẩu không đúng.');
@@ -278,26 +298,25 @@ export default function LoginContent() {
               </div>
 
               {selectedRole === 'Candidate' ? (
-                <button
-                  type="button"
+                <a
+                  href={GOOGLE_AUTH_URL}
                   className="btn-secondary mb-6 w-full rounded-xl border-2 py-4 text-center text-base font-semibold"
                 >
                   🔗 Tiếp tục với Google
-                </button>
+                </a>
               ) : (
                 <button
                   type="button"
-                  className="btn-secondary mb-6 w-full rounded-xl border-2 py-4 text-center text-base font-semibold"
+                  disabled
+                  className="btn-secondary mb-6 w-full cursor-not-allowed rounded-xl border-2 py-4 text-center text-base font-semibold opacity-60"
                 >
-                  🏢 Đăng nhập qua SSO
+                  🏢 SSO chưa được hỗ trợ
                 </button>
               )}
 
               <div className="flex justify-between pt-2 text-base font-medium">
                 <p>
-                  <a href="#" className="cursor-pointer text-accent no-underline hover:underline">
-                    Quên mật khẩu?
-                  </a>
+                  <span className="text-foreground-tertiary">Quên mật khẩu? Chưa hỗ trợ</span>
                 </p>
                 <p className="text-foreground-tertiary">
                   Chưa có tài khoản?{' '}

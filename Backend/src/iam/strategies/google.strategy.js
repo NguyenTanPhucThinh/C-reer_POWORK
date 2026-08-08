@@ -30,22 +30,26 @@ export const createGoogleStrategy = () =>
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
-        const email = profile.emails?.[0]?.value
+        const googleEmail = profile.emails?.[0]
+        const email = googleEmail?.value?.trim().toLowerCase()
+        const emailVerified = googleEmail?.verified ?? profile._json?.email_verified
         const fullName = profile.displayName || 'Google User'
         const googleId = profile.id
 
-        if (!email) {
-          return done(new Error('Không lấy được email từ Google'), null)
+        if (!email || emailVerified !== true) {
+          return done(new Error('Không lấy được email đã xác minh từ Google'), null)
         }
 
         // Tìm user theo email — có thể đã đăng ký bằng email/password trước đó
-        let user = await prisma.user.findUnique({ where: { email } })
+        let user = await prisma.user.findFirst({
+          where: { email: { equals: email, mode: 'insensitive' } },
+        })
 
         if (user) {
           // User đã tồn tại → cập nhật googleId nếu chưa có, link vào account cũ
           if (!user.googleId) {
             user = await prisma.user.update({
-              where: { email },
+              where: { id: user.id },
               data: { googleId },
             })
           }

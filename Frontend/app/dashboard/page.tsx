@@ -9,6 +9,10 @@ export default function DashboardRedirectPage() {
   const { user, status } = useAuth();
 
   useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.replace('/login');
+      return;
+    }
     if (status !== 'authenticated' || !user) return;
     router.replace(user.role === 'Employer' ? '/employer/dashboard' : '/candidate/dashboard');
   }, [router, status, user]);

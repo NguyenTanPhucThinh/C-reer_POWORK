@@ -5,16 +5,20 @@
 import { z } from 'zod'
 
 export const registerSchema = z.object({
-  email: z.string().email('Email không hợp lệ'),
+  email: z.string().trim().toLowerCase().email('Email không hợp lệ'),
   password: z.string().min(8, 'Mật khẩu phải có ít nhất 8 ký tự'),
-  full_name: z.string().min(1, 'full_name là bắt buộc'),
+  full_name: z.string().trim().min(1, 'full_name là bắt buộc'),
   role: z.enum(['Candidate', 'Employer'], {
     errorMap: () => ({ message: 'role phải là Candidate hoặc Employer' }),
   }),
-  company_name: z.string().optional(),
+  company_name: z.string().trim().optional(),
 })
 
 export const loginSchema = z.object({
-  email: z.string().email('Email không hợp lệ'),
+  email: z.string().trim().toLowerCase().email('Email không hợp lệ'),
   password: z.string().min(1, 'password là bắt buộc'),
+})
+
+export const googleExchangeSchema = z.object({
+  code: z.string().min(32).max(128),
 })
