@@ -1,17 +1,12 @@
 import axios, { AxiosError, AxiosResponse } from 'axios';
 import type { ApiErrorBody, ApiSuccess } from '@/lib/types/api';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-const API_PREFIX = '/api/v1';
-
 /**
- * Client cho các resource nghiệp vụ (challenges, assessment, profile...).
- * Token nằm trong cookie httpOnly nên KHÔNG cần interceptor gắn Authorization;
- * trình duyệt tự gửi cookie với same-origin. withCredentials để giữ cookie khi
- * BE thật cùng domain / cấu hình CORS cho phép.
+ * Client cho resource nghiệp vụ đi qua BFF same-origin. BFF đọc cookie httpOnly
+ * và gắn Bearer token khi gọi Backend; token không bao giờ lộ cho JavaScript.
  */
 export const apiClient = axios.create({
-  baseURL: `${API_BASE_URL}${API_PREFIX}`,
+  baseURL: '/api/backend',
   timeout: 10000,
   withCredentials: true,
   headers: {

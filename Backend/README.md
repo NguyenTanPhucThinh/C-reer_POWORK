@@ -463,11 +463,11 @@ brew services stop postgresql
 
 ### IAM Module — `/api/v1/auth`
 
-| Method | Endpoint                | Body                                 | Mô tả                                             |
-| ------ | ----------------------- | ------------------------------------ | ------------------------------------------------- |
-| POST   | `/api/v1/auth/register` | `{email, password, role, full_name}` | Đăng ký (`role`: `"CANDIDATE"` hoặc `"EMPLOYER"`) |
-| POST   | `/api/v1/auth/login`    | `{email, password}`                  | Đăng nhập — trả về `access_token`                 |
-| GET    | `/api/v1/auth/me`       | —                                    | Xem thông tin user hiện tại (cần Bearer token)    |
+| Method | Endpoint                | Body                                                | Mô tả                                                                          |
+| ------ | ----------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------ |
+| POST   | `/api/v1/auth/register` | `{email, password, role, full_name, company_name?}` | Đăng ký (`role`: `"Candidate"` hoặc `"Employer"`; Employer cần `company_name`) |
+| POST   | `/api/v1/auth/login`    | `{email, password}`                                 | Đăng nhập — trả về `access_token`                                              |
+| GET    | `/api/v1/auth/me`       | —                                                   | Xem thông tin user hiện tại (cần Bearer token)                                 |
 
 **Response mẫu — login:**
 

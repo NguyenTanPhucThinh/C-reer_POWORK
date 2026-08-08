@@ -14,5 +14,5 @@ export const updateTalentPoolStatus = async (
 };
 
 export const addToTalentPool = async (userId: string): Promise<void> => {
-  await apiClient.post('/api/v1/talent-pool', { user_id: userId });
+  await apiClient.post('/talent-pool', { user_id: userId });
 };
