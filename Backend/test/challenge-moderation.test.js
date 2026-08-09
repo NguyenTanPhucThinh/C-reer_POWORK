@@ -3,6 +3,7 @@ import test from 'node:test'
 
 import { createChallenge } from '../src/challenge/services/challenge.service.js'
 import { moderateChallenge } from '../src/challenge/services/moderation.service.js'
+import { createChallengeSchema } from '../src/challenge/models/challenge.schema.js'
 import { errorHandler } from '../src/shared/middlewares/error.middleware.js'
 
 const approved = {
@@ -40,6 +41,25 @@ const geminiResponse = (result) => ({
   }),
 })
 
+const moderationIssue = (category) => ({
+  decision: 'NEEDS_REVISION',
+  summary: 'Challenge cần thu hẹp phạm vi trước khi phát hành.',
+  issues: [
+    {
+      category,
+      message: 'Nội dung không phù hợp với phạm vi một bài đánh giá tuyển dụng.',
+      suggestion: 'Chuyển sang tình huống giả định và chỉ yêu cầu một phần nhỏ.',
+    },
+  ],
+})
+
+const parsedModeration = (result) => (input) =>
+  moderateChallenge(input, {
+    apiKey: 'test-key',
+    model: 'test-model',
+    fetchImpl: async () => geminiResponse(result),
+  })
+
 test('Gemini request keeps the API key out of the URL and accepts a valid decision', async () => {
   let request
   const result = await moderateChallenge(validChallenge, {
@@ -60,20 +80,25 @@ test('Gemini request keeps the API key out of the URL and accepts a valid decisi
   )
 })
 
-test('invalid, empty, or failed Gemini responses fail closed', async () => {
+test('AI failures and malformed responses create no Challenge', async () => {
   const responses = [
     async () => ({ ok: false, status: 429 }),
     async () =>
       geminiResponse({ decision: 'APPROVED', summary: 'Sai', issues: needsRevision.issues }),
     async () => ({ ok: true, json: async () => ({ candidates: [] }) }),
   ]
+  let writes = 0
 
   for (const fetchImpl of responses) {
     await assert.rejects(
-      moderateChallenge(validChallenge, { apiKey: 'key', fetchImpl }),
+      createChallenge(validChallenge, {
+        moderate: (input) => moderateChallenge(input, { apiKey: 'key', fetchImpl }),
+        repository: { createChallengeWithRubrics: async () => writes++ },
+      }),
       (error) => error?.statusCode === 503 && error?.errorCode === 'CHAL_MODERATION_UNAVAILABLE',
     )
   }
+  assert.equal(writes, 0)
 })
 
 test('an approved Challenge is persisted only after moderation', async () => {
@@ -144,6 +169,32 @@ test('a Challenge needing revision returns actionable details and creates no dat
   assert.deepEqual(responseBody.details, needsRevision)
 })
 
+test('the frozen contract blocks oversized, real-data, and complete-product Challenges', async (t) => {
+  const scenarios = [
+    ['oversized Challenge', 'SCOPE_TOO_LARGE'],
+    ['real company data', 'REAL_COMPANY_DATA'],
+    ['complete product', 'COMPLETE_DELIVERABLE'],
+  ]
+
+  for (const [name, category] of scenarios) {
+    await t.test(name, async () => {
+      let writes = 0
+
+      await assert.rejects(
+        createChallenge(validChallenge, {
+          moderate: parsedModeration(moderationIssue(category)),
+          repository: { createChallengeWithRubrics: async () => writes++ },
+        }),
+        (error) =>
+          error?.statusCode === 422 &&
+          error?.errorCode === 'CHAL_MODERATION_REQUIRED' &&
+          error?.details?.issues?.[0]?.category === category,
+      )
+      assert.equal(writes, 0)
+    })
+  }
+})
+
 test('validation and moderation failures create no Challenge or rubric', async () => {
   let moderationCalls = 0
   let writes = 0
@@ -168,3 +219,95 @@ test('validation and moderation failures create no Challenge or rubric', async (
   assert.equal(moderationCalls, 1)
   assert.equal(writes, 0)
 })
+
+test('invalid HTTP requests are rejected at the API boundary before side effects', () => {
+  const invalidRequests = [
+    {},
+    { title: '', description: 'Mô tả', industry: 'IT', deadline: validChallenge.deadline },
+    {
+      title: 'Challenge',
+      description: 'Mô tả',
+      industry: 'IT',
+      deadline: 'not-a-date',
+      rubrics: [],
+    },
+    {
+      title: 'Challenge',
+      description: 'Mô tả',
+      industry: 'IT',
+      deadline: validChallenge.deadline,
+      rubrics: [{ criteria_name: 'Đúng', weight: 100, max_score: 0 }],
+    },
+  ]
+
+  for (const request of invalidRequests) {
+    assert.equal(createChallengeSchema.safeParse(request).success, false)
+  }
+})
+
+test(
+  'live Gemini classifies the frozen acceptance examples',
+  { skip: process.env.GEMINI_LIVE_TEST !== '1', timeout: 120_000 },
+  async (t) => {
+    const examples = [
+      {
+        name: 'valid Challenge',
+        expectedDecision: 'APPROVED',
+        challenge: {
+          title: 'Thiết kế cache tổng quan',
+          description:
+            'Trong tình huống giả định dùng dữ liệu mẫu, hãy trình bày thiết kế cache tổng quan cho một API. Không cần viết sản phẩm hoặc mã nguồn production.',
+          industry: 'Backend Engineering',
+          rubricCriteria: ['Tính hợp lý của thiết kế'],
+        },
+      },
+      {
+        name: 'oversized Challenge',
+        expectedCategory: 'SCOPE_TOO_LARGE',
+        challenge: {
+          title: 'Xây dựng toàn bộ nền tảng trong sáu tháng',
+          description:
+            'Hãy thiết kế và triển khai frontend, backend, ứng dụng di động, hệ thống thanh toán, vận hành production và kế hoạch phát triển trong sáu tháng.',
+          industry: 'Software Engineering',
+          rubricCriteria: ['Mức độ hoàn thiện'],
+        },
+      },
+      {
+        name: 'real-data Challenge',
+        expectedCategory: 'REAL_COMPANY_DATA',
+        challenge: {
+          title: 'Phân tích dữ liệu khách hàng hiện tại',
+          description:
+            'Hãy sử dụng dữ liệu khách hàng thật, doanh thu nội bộ và các báo cáo chưa công bố của công ty để đưa ra giải pháp.',
+          industry: 'Data Analytics',
+          rubricCriteria: ['Giá trị phân tích'],
+        },
+      },
+      {
+        name: 'complete-product Challenge',
+        expectedCategory: 'COMPLETE_DELIVERABLE',
+        challenge: {
+          title: 'Bàn giao website thương mại điện tử hoàn chỉnh',
+          description:
+            'Hãy xây dựng và bàn giao website production-ready đầy đủ frontend, backend, thanh toán, triển khai và tài liệu vận hành để công ty sử dụng ngay.',
+          industry: 'Software Engineering',
+          rubricCriteria: ['Mức độ hoàn thiện'],
+        },
+      },
+    ]
+
+    for (const example of examples) {
+      await t.test(example.name, async () => {
+        const result = await moderateChallenge(example.challenge)
+
+        if (example.expectedDecision) {
+          assert.equal(result.decision, example.expectedDecision)
+          return
+        }
+
+        assert.equal(result.decision, 'NEEDS_REVISION')
+        assert.ok(result.issues.some((issue) => issue.category === example.expectedCategory))
+      })
+    }
+  },
+)

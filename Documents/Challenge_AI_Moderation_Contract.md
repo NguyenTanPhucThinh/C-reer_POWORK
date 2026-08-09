@@ -373,3 +373,20 @@ Step 1 được xem là hoàn thành khi Backend và Frontend cùng tuân thủ 
 8. Frontend giữ nguyên form sau mọi trường hợp chưa tạo thành công.
 9. Result panel phải đủ rõ ràng và chỉn chu để demo khách hàng.
 10. Provider AI là chi tiết triển khai Backend, không làm thay đổi API contract này.
+
+---
+
+## 16. Đóng băng contract sau Step 3
+
+Contract kiểm duyệt được xem là đóng băng khi bộ kiểm thử Backend xác nhận đủ các điều kiện:
+
+- Challenge hợp lệ được chấp nhận và chỉ được ghi sau quyết định `APPROVED`.
+- Challenge quá lớn bị chặn với `SCOPE_TOO_LARGE`.
+- Challenge sử dụng dữ liệu thật bị chặn với `REAL_COMPANY_DATA`.
+- Challenge yêu cầu sản phẩm hoàn chỉnh bị chặn với `COMPLETE_DELIVERABLE`.
+- Lỗi AI và response AI sai cấu trúc đều trả `CHAL_MODERATION_UNAVAILABLE` và không ghi dữ liệu.
+- Request sai bị chặn tại API boundary trước khi gọi kiểm duyệt hoặc repository.
+
+Bộ kiểm thử deterministic phải chạy trong CI mà không gọi mạng. Kiểm thử Gemini thật chỉ chạy khi chủ động đặt `GEMINI_LIVE_TEST=1` và cung cấp `GEMINI_API_KEY`; việc này tránh tiêu quota miễn phí trong các lần CI thông thường.
+
+Sau khi các điều kiện trên đạt, Frontend phải sử dụng nguyên trạng contract `201`, `422 CHAL_MODERATION_REQUIRED` và `503 CHAL_MODERATION_UNAVAILABLE`. Mọi thay đổi contract tiếp theo phải được xem là thay đổi API có chủ đích, không phải điều chỉnh riêng của Frontend.
