@@ -359,9 +359,9 @@ Hệ thống áp dụng nguyên tắc fail-closed: chỉ `Safe` mới được E
 
 #### [POST] `/api/v1/assessment/submissions/{submission_id}/unlock`
 
-- **Mô tả:** Duyệt bài và Mở khóa danh tính (Bắn Event chứa `user_id`, `challenge_id` sang Profile Module xử lý).
+- **Mô tả:** Duyệt bài, mở khóa danh tính và tạo Verified Evidence trong cùng transaction.
 - **Auth:** `Bearer <Employer_Token>`
-- **Ownership, Safety & Snapshot:** Chỉ công ty sở hữu Challenge của Submission mới được approve và unlock. File phải có `file_status = Safe`, Submission phải ở trạng thái `Evaluated` và có kết quả chấm. Transaction dùng compare-and-set trên `is_unlocked`; mỗi anonymous `hash_id` chỉ tạo được một Verified Evidence. Snapshot đã tạo không bị cập nhật ngược bởi evaluate, reject hoặc unlock lần hai.
+- **Ownership, Safety & Snapshot:** Chỉ công ty sở hữu Challenge của Submission mới được approve và unlock. File phải có `file_status = Safe`, Submission phải ở trạng thái `Evaluated` và có kết quả chấm. Transaction bao gồm compare-and-set `is_unlocked`, cập nhật Submission, tạo Verified Evidence và lookup profile trả về. Nếu bất kỳ bước nào lỗi, toàn bộ thay đổi được rollback. Mỗi anonymous `hash_id` chỉ tạo được một Verified Evidence; gọi lặp hoặc request đồng thời nhận `409` và không tạo snapshot thứ hai.
 - **Request Body:**
   ```json
   {
@@ -427,6 +427,7 @@ Hệ thống áp dụng nguyên tắc fail-closed: chỉ `Safe` mới được E
 
 - **Mô tả:** Thêm một ứng viên đã được mở khóa (unlock) vào Talent Pool của công ty.
 - **Auth:** `Bearer <Employer_Token>`
+- **Authorization:** `company_id` chỉ lấy từ JWT. Candidate phải có Identity Mapping đã unlock cho một Challenge thuộc đúng công ty hiện tại; việc đã được công ty khác unlock không cấp quyền thêm vào Talent Pool.
 - **Request Body:**
   ```json
   {
@@ -440,6 +441,7 @@ Hệ thống áp dụng nguyên tắc fail-closed: chỉ `Safe` mới được E
     "message": "Candidate added to Talent Pool"
   }
   ```
+- **Response (403 Forbidden):** `POOL_007` khi Candidate chưa được chính công ty hiện tại unlock. Không tạo Talent Pool entry và không tiết lộ công ty nào đã unlock Candidate.
 
 #### [GET] `/api/v1/talent-pool`
 

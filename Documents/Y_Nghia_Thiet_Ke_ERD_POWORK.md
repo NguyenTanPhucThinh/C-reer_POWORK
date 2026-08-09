@@ -72,6 +72,7 @@ Module mở rộng cho phép doanh nghiệp lưu lại danh sách các ứng vi�
 - **Bảng `Talent_Pools`:**
   - Lưu trữ `company_id` và `user_id` (của ứng viên).
   - Trường `status` (Enum: `IN_POOL`, `INVITED`, `CONSIDERING`) để theo dõi trạng thái tuyển dụng.
+  - Trước khi tạo bản ghi, Backend đối chiếu `Identity_Mappings.challenge_id` với Challenge thuộc `company_id` từ JWT. Candidate do công ty khác unlock không thể được thêm vào pool.
 - **Ranh giới cô lập:** Bảng này lưu trữ độc lập, tuân thủ nguyên tắc không sử dụng Khóa ngoại (FK) chéo sang IAM Module. `company_id` và `user_id` chỉ được lưu dưới dạng Data Field để đảm bảo sự lỏng lẻo (Loosely Coupling) giữa các service.
 
 ---
