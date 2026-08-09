@@ -4,6 +4,7 @@ import minioClient from '../../shared/config/minio.js'
 import { config } from '../../shared/config/index.js'
 import prisma from '../../shared/config/prisma.js'
 import { AppError } from '../../shared/utils/AppError.js'
+import { scanObjectForVirus } from './scan.service.js'
 
 const FINAL_STATUSES = new Set(['READY', 'REJECTED', 'SCAN_FAILED', 'EXPIRED'])
 const RECORDING_MIME_TYPE = 'video/webm'
@@ -132,12 +133,49 @@ const statRecording = async (objectKey, statObject) => {
 
 const defaultStatObject = (objectKey) => minioClient.statObject(config.minio.bucket, objectKey)
 
+export const scanVerificationRecording = async (
+  verificationId,
+  { database = prisma, scan = scanObjectForVirus, now = new Date() } = {},
+) => {
+  const verification = await database.submissionVerification.findUnique({
+    where: { id: verificationId },
+    select: { id: true, status: true, recordingObjectKey: true },
+  })
+  if (!verification || verification.status !== 'PENDING_SCAN') return verification
+
+  let status
+  try {
+    const result = await scan(verification.recordingObjectKey)
+    if (result.isInfected === true) status = 'REJECTED'
+    else if (result.isInfected === false) status = 'READY'
+    else throw new Error('ClamAV returned an indeterminate result')
+  } catch (error) {
+    console.error(`[Verification Scan] ${verificationId}:`, error.message)
+    status = 'SCAN_FAILED'
+  }
+
+  const updated = await database.submissionVerification.updateMany({
+    where: { id: verificationId, status: 'PENDING_SCAN' },
+    data: { status, completedAt: now },
+  })
+  return updated.count === 1 ? { ...verification, status, completedAt: now } : verification
+}
+
+export const queueVerificationRecordingScan = (verificationId) => {
+  // ponytail: in-process job is MVP-only; use a durable queue when restart/retry guarantees matter.
+  setImmediate(() => {
+    scanVerificationRecording(verificationId).catch((error) => {
+      console.error(`[Verification Scan Job] ${verificationId}:`, error.message)
+    })
+  })
+}
+
 export const completeVerification = async (
   { verificationId, userId, objectKey, recordingMimeType, answers },
   {
     database = prisma,
     statObject = defaultStatObject,
-    queueScan = () => {},
+    queueScan = queueVerificationRecordingScan,
     now = new Date(),
   } = {},
 ) => {

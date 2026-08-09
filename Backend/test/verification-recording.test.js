@@ -6,6 +6,7 @@ import {
   completeVerification,
   createVerificationRecordingObjectKey,
   createVerificationRecordingUpload,
+  scanVerificationRecording,
 } from '../src/assessment/services/verification-recording.service.js'
 
 const now = new Date('2026-08-09T12:00:00.000Z')
@@ -85,7 +86,7 @@ const complete = (database, overrides = {}, dependencies = {}) =>
       answers: structuredClone(answers),
       ...overrides,
     },
-    { database, statObject, now, ...dependencies },
+    { database, statObject, queueScan: () => {}, now, ...dependencies },
   )
 
 test('recording object keys are anonymous UUIDs and contain no original identity', () => {
@@ -258,4 +259,78 @@ test('concurrent complete requests allow exactly one state transition', async ()
   assert.equal(results.filter(({ status }) => status === 'rejected').length, 1)
   assert.equal(session.getUpdateCount(), 1)
   assert.equal(session.state.status, 'PENDING_SCAN')
+})
+
+const createScanDatabase = (status = 'PENDING_SCAN') => {
+  let updateCount = 0
+  const state = { id: 'verification-1', status, recordingObjectKey: objectKey, completedAt: null }
+  const database = {
+    submissionVerification: {
+      findUnique: async ({ where }) => (where.id === state.id ? { ...state } : null),
+      updateMany: async ({ where, data }) => {
+        if (where.id !== state.id || where.status !== state.status) return { count: 0 }
+        updateCount += 1
+        Object.assign(state, data)
+        return { count: 1 }
+      },
+    },
+  }
+  return { database, state, getUpdateCount: () => updateCount }
+}
+
+test('a clean verification recording becomes READY', async () => {
+  const session = createScanDatabase()
+  await scanVerificationRecording('verification-1', {
+    database: session.database,
+    scan: async (key) => {
+      assert.equal(key, objectKey)
+      return { isInfected: false, viruses: [] }
+    },
+    now,
+  })
+
+  assert.equal(session.state.status, 'READY')
+  assert.equal(session.state.completedAt.toISOString(), now.toISOString())
+})
+
+test('an infected verification recording becomes REJECTED', async () => {
+  const session = createScanDatabase()
+  await scanVerificationRecording('verification-1', {
+    database: session.database,
+    scan: async () => ({ isInfected: true, viruses: ['Eicar-Signature'] }),
+    now,
+  })
+
+  assert.equal(session.state.status, 'REJECTED')
+  assert.equal(session.state.completedAt.toISOString(), now.toISOString())
+})
+
+test('ClamAV errors and indeterminate results become SCAN_FAILED', async () => {
+  for (const scan of [
+    async () => {
+      throw new Error('clamav unavailable')
+    },
+    async () => ({}),
+  ]) {
+    const session = createScanDatabase()
+    await scanVerificationRecording('verification-1', { database: session.database, scan, now })
+    assert.equal(session.state.status, 'SCAN_FAILED')
+    assert.equal(session.state.completedAt.toISOString(), now.toISOString())
+  }
+})
+
+test('recording scan ignores sessions outside PENDING_SCAN', async () => {
+  const session = createScanDatabase('READY')
+  let scanCount = 0
+  await scanVerificationRecording('verification-1', {
+    database: session.database,
+    scan: async () => {
+      scanCount += 1
+      return { isInfected: false }
+    },
+    now,
+  })
+
+  assert.equal(scanCount, 0)
+  assert.equal(session.getUpdateCount(), 0)
 })
