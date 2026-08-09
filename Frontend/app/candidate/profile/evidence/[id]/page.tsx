@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { EvidenceDetailPanel, LoadingSkeleton } from '@/components/profile';
 import { useEvidenceDetail } from '@/lib/hooks';
+import { useAuth } from '@/lib/hooks/useAuth';
 
 function getEvidenceId(params: ReturnType<typeof useParams>) {
   const rawId = params?.id;
@@ -13,7 +14,11 @@ function getEvidenceId(params: ReturnType<typeof useParams>) {
 
 export default function CandidateEvidenceDetailPage() {
   const evidenceId = getEvidenceId(useParams());
-  const { data: evidence, isLoading, isError, error } = useEvidenceDetail(evidenceId);
+  const { user } = useAuth();
+  const { data: evidence, isLoading, isError, error } = useEvidenceDetail(
+    evidenceId,
+    user?.user_id ?? ''
+  );
 
   if (isLoading) {
     return <LoadingSkeleton />;
