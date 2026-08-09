@@ -10,9 +10,11 @@ import type { UserRole } from '@/lib/types';
 export function DashboardShell({
   children,
   allowedRole,
+  showNavigation = true,
 }: {
   children: React.ReactNode;
   allowedRole?: UserRole;
+  showNavigation?: boolean;
 }) {
   const router = useRouter();
   const { status, user } = useAuth();
@@ -41,6 +43,10 @@ export function DashboardShell({
         Đang tải...
       </div>
     );
+  }
+
+  if (!showNavigation) {
+    return <main className="h-screen overflow-y-auto bg-background">{children}</main>;
   }
 
   return (

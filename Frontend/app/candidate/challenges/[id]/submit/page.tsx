@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import axios from 'axios';
@@ -16,6 +16,7 @@ function getChallengeId(params: ReturnType<typeof useParams>): string {
 
 export default function CandidateChallengeSubmitPage() {
   const challengeId = getChallengeId(useParams());
+  const router = useRouter();
   const [isUploaderOpen, setIsUploaderOpen] = useState(false);
 
   const { mutateAsync: uploadSubmission, isPending: isUploading } = useMutation({
@@ -27,9 +28,12 @@ export default function CandidateChallengeSubmitPage() {
       });
 
       await axios.put(upload_url, file, { headers: { 'Content-Type': file.type } });
-      await assessmentAPI.submit({ challenge_id: challengeId, solution_url: object_key });
+      return assessmentAPI.submit({ challenge_id: challengeId, solution_url: object_key });
     },
-    onSuccess: () => setIsUploaderOpen(false),
+    onSuccess: (submission) => {
+      setIsUploaderOpen(false);
+      router.push(`/candidate/my-submissions/${submission.submission_id}/verification`);
+    },
     onError: (error) => {
       const message = axios.isAxiosError(error)
         ? error.response?.data?.message || error.message
@@ -91,7 +95,9 @@ export default function CandidateChallengeSubmitPage() {
         challengeId={challengeId}
         isOpen={isUploaderOpen}
         onClose={() => setIsUploaderOpen(false)}
-        onUpload={(file, metadata) => uploadSubmission({ file, metadata })}
+        onUpload={async (file, metadata) => {
+          await uploadSubmission({ file, metadata });
+        }}
         hasExistingSubmissions={false}
       />
     </div>

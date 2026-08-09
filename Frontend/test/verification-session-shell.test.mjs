@@ -1,0 +1,49 @@
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import test from 'node:test';
+
+test('Candidate verification shell is resumable and derives its phase from Backend status', async () => {
+  const [page, candidateLayout, dashboardShell, footer, submitPage] = await Promise.all([
+    readFile(
+      new URL('../app/candidate/my-submissions/[id]/verification/page.tsx', import.meta.url),
+      'utf8'
+    ),
+    readFile(new URL('../app/candidate/layout.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../components/layout/DashboardShell.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../components/layout/Footer.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../app/candidate/challenges/[id]/submit/page.tsx', import.meta.url), 'utf8'),
+  ]);
+
+  for (const phase of [
+    'PREPARING',
+    'STARTING',
+    'ORAL_ACTIVE',
+    'GENERATING_QUESTIONS',
+    'ANSWERING',
+    'PREPARING_UPLOAD',
+    'UPLOADING',
+    'COMPLETING',
+    'SCANNING',
+    'COMPLETED',
+    'FAILED',
+  ]) {
+    assert.match(page, new RegExp(`'${phase}'`));
+  }
+
+  assert.match(page, /useReducer\(verificationReducer, initialState\)/);
+  assert.match(page, /phase: STATUS_PHASE\[action\.session\.status\]/);
+  assert.match(page, /assessmentAPI\.startVerification/);
+  assert.match(page, /assessmentAPI\.resumeVerification/);
+  assert.match(page, /sessionStorage\.setItem/);
+  assert.match(page, /transitionLock\.current/);
+  assert.doesNotMatch(page, /apiClient\.|user_id/);
+
+  assert.match(candidateLayout, /showNavigation=\{!isCandidateVerificationPath\(pathname\)\}/);
+  assert.match(dashboardShell, /if \(!showNavigation\)/);
+  assert.match(footer, /if \(isCandidateVerificationPath\(pathname\)\) return null/);
+  assert.match(submitPage, /return assessmentAPI\.submit/);
+  assert.match(
+    submitPage,
+    /router\.push\(`\/candidate\/my-submissions\/\$\{submission\.submission_id\}\/verification`\)/
+  );
+});
