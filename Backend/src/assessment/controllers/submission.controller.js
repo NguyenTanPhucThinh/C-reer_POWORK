@@ -5,6 +5,7 @@
 import { sendSuccess, sendCreated } from '../../shared/utils/response.js'
 import * as submissionService from '../services/submission.service.js'
 import * as evaluationService from '../services/evaluation.service.js'
+import * as companyService from '../../iam/services/company.service.js'
 import prisma from '../../shared/config/prisma.js'
 
 // POST /api/v1/assessment/submissions
@@ -34,7 +35,8 @@ export const submitSolution = async (req, res) => {
 // GET /api/v1/assessment/challenges/:challenge_id/submissions
 export const getSubmissionsByChallenge = async (req, res) => {
   const { challenge_id: challengeId } = req.params
-  const result = await submissionService.getSubmissionsByChallenge(challengeId)
+  const { company_id: companyId } = await companyService.getCompanyByUserId(req.user.userId)
+  const result = await submissionService.getSubmissionsByChallenge(challengeId, companyId)
   return sendSuccess(
     res,
     result.map((group) => ({
@@ -54,6 +56,7 @@ export const getSubmissionsByChallenge = async (req, res) => {
 // POST /api/v1/assessment/submissions/:submission_id/evaluate
 export const evaluateSubmission = async (req, res) => {
   const { submission_id: submissionId } = req.params
+  const { company_id: companyId } = await companyService.getCompanyByUserId(req.user.userId)
   const result = await evaluationService.evaluateSubmission(
     submissionId,
     {
@@ -64,7 +67,7 @@ export const evaluateSubmission = async (req, res) => {
       })),
       generalComment: req.body.general_comment,
     },
-    req.user.userId,
+    companyId,
   )
   return sendCreated(res, {
     submission_id: result.submissionId,
@@ -79,10 +82,22 @@ export const evaluateSubmission = async (req, res) => {
   })
 }
 
+// POST /api/v1/assessment/submissions/:submission_id/reject
+export const rejectSubmission = async (req, res) => {
+  const { submission_id: submissionId } = req.params
+  const { company_id: companyId } = await companyService.getCompanyByUserId(req.user.userId)
+  const result = await submissionService.rejectSubmission(submissionId, companyId)
+  return sendSuccess(res, {
+    submission_id: result.submissionId,
+    status: `${result.status[0]}${result.status.slice(1).toLowerCase()}`,
+  })
+}
+
 // POST /api/v1/assessment/submissions/:submission_id/unlock
 export const unlockCandidate = async (req, res) => {
   const { submission_id: submissionId } = req.params
-  const result = await submissionService.unlockCandidate(submissionId)
+  const { company_id: companyId } = await companyService.getCompanyByUserId(req.user.userId)
+  const result = await submissionService.unlockCandidate(submissionId, companyId)
   return sendSuccess(res, {
     message: result.message,
     unlocked_candidate_profile: {

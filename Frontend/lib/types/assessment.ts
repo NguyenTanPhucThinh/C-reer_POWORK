@@ -74,6 +74,11 @@ export interface EvaluateResponse {
   evaluated_at: string;
 }
 
+export interface RejectSubmissionResponse {
+  submission_id: string;
+  status: 'Rejected';
+}
+
 export interface UnlockedCandidateProfile {
   user_id: string;
   full_name: string;
