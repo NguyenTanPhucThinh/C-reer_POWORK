@@ -21,7 +21,60 @@ import type {
   Profile,
   TalentPoolEntry,
   AddToTalentPoolRequest,
+  StartVerificationInput,
+  VerificationSession,
+  VerificationStatus,
+  VerificationEvent,
+  VerificationQuestions,
+  VerificationRecordingUpload,
+  CompleteVerificationInput,
+  VerificationCompletion,
 } from '@/lib/types';
+
+interface VerificationSessionResponse {
+  verification_id: string;
+  submission_id: string;
+  verification_status: VerificationStatus;
+  verification_code: string;
+  oral_duration_seconds: VerificationSession['oralDurationSeconds'];
+  expires_at: string;
+}
+
+interface VerificationQuestionsResponse {
+  verification_id: string;
+  verification_status: VerificationStatus;
+  questions: Array<{
+    question_id: string;
+    question: string;
+    minimum_length: number;
+    maximum_length: number;
+  }>;
+}
+
+interface VerificationRecordingUploadResponse {
+  upload_url: string;
+  object_key: string;
+  expires_in: number;
+}
+
+interface VerificationCompletionResponse {
+  verification_id: string;
+  verification_status: VerificationStatus;
+}
+
+const toVerificationSession = (response: VerificationSessionResponse): VerificationSession => ({
+  verificationId: response.verification_id,
+  submissionId: response.submission_id,
+  status: response.verification_status,
+  verificationCode: response.verification_code,
+  oralDurationSeconds: response.oral_duration_seconds,
+  expiresAt: response.expires_at,
+});
+
+const getVerificationSession = (verificationId: string) =>
+  unwrap<VerificationSessionResponse>(
+    apiClient.get(`/assessment/verifications/${verificationId}`)
+  ).then(toVerificationSession);
 
 // IAM Module — BFF same-origin /api/auth (set/clear cookie httpOnly)
 export const authAPI = {
@@ -67,6 +120,60 @@ export const assessmentAPI = {
     unwrap<GetPresignedUploadUrlResponse>(
       apiClient.get(`/assessment/challenges/${payload.challenge_id}/presigned-url`, {
         params: { filename: payload.filename, content_type: payload.content_type },
+      })
+    ),
+  startVerification: (submissionId: string, payload: StartVerificationInput) =>
+    unwrap<VerificationSessionResponse>(
+      apiClient.post(`/assessment/submissions/${submissionId}/verification/start`, {
+        oral_duration_seconds: payload.oralDurationSeconds,
+      })
+    ).then(toVerificationSession),
+  resumeVerification: getVerificationSession,
+  getVerificationStatus: getVerificationSession,
+  generateVerificationQuestions: (verificationId: string) =>
+    unwrap<VerificationQuestionsResponse>(
+      apiClient.post(`/assessment/verifications/${verificationId}/questions`, undefined, {
+        timeout: 25_000,
+      })
+    ).then(
+      (response): VerificationQuestions => ({
+        verificationId: response.verification_id,
+        status: response.verification_status,
+        questions: response.questions.map((question) => ({
+          questionId: question.question_id,
+          question: question.question,
+          minimumLength: question.minimum_length,
+          maximumLength: question.maximum_length,
+        })),
+      })
+    ),
+  sendVerificationEvent: async (verificationId: string, event: VerificationEvent) => {
+    await apiClient.post(`/assessment/verifications/${verificationId}/events`, { event });
+  },
+  requestVerificationRecordingUpload: (verificationId: string) =>
+    unwrap<VerificationRecordingUploadResponse>(
+      apiClient.post(`/assessment/verifications/${verificationId}/recording-upload`)
+    ).then(
+      (response): VerificationRecordingUpload => ({
+        uploadUrl: response.upload_url,
+        objectKey: response.object_key,
+        expiresIn: response.expires_in,
+      })
+    ),
+  completeVerification: (verificationId: string, payload: CompleteVerificationInput) =>
+    unwrap<VerificationCompletionResponse>(
+      apiClient.post(`/assessment/verifications/${verificationId}/complete`, {
+        object_key: payload.objectKey,
+        recording_mime_type: payload.recordingMimeType,
+        answers: payload.answers.map((answer) => ({
+          question_id: answer.questionId,
+          answer: answer.answer,
+        })),
+      })
+    ).then(
+      (response): VerificationCompletion => ({
+        verificationId: response.verification_id,
+        status: response.verification_status,
       })
     ),
 };

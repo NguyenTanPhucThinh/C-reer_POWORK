@@ -111,3 +111,77 @@ export interface GetPresignedUploadUrlResponse {
   file_status: 'AwaitingUpload';
   expires_in: number;
 }
+
+export type VerificationStatus =
+  | 'PendingCamera'
+  | 'CameraActive'
+  | 'GeneratingQuestions'
+  | 'Answering'
+  | 'PendingUpload'
+  | 'PendingScan'
+  | 'Ready'
+  | 'Rejected'
+  | 'ScanFailed'
+  | 'Expired';
+
+export type VerificationEvent =
+  | 'CAMERA_INTERRUPTED'
+  | 'CAMERA_RESTORED'
+  | 'FOCUS_LOST'
+  | 'PASTE_BLOCKED'
+  | 'SELECT_ALL_BLOCKED'
+  | 'COPY_BLOCKED'
+  | 'DROP_BLOCKED'
+  | 'ORAL_STARTED'
+  | 'ORAL_COMPLETED'
+  | 'ANSWERING_STARTED';
+
+export type OralDurationSeconds = 15 | 30 | 60 | 120;
+
+export interface StartVerificationInput {
+  oralDurationSeconds: OralDurationSeconds;
+}
+
+export interface VerificationSession {
+  verificationId: string;
+  submissionId: string;
+  status: VerificationStatus;
+  verificationCode: string;
+  oralDurationSeconds: OralDurationSeconds;
+  expiresAt: string;
+}
+
+export interface VerificationQuestion {
+  questionId: string;
+  question: string;
+  minimumLength: number;
+  maximumLength: number;
+}
+
+export interface VerificationQuestions {
+  verificationId: string;
+  status: VerificationStatus;
+  questions: VerificationQuestion[];
+}
+
+export interface VerificationRecordingUpload {
+  uploadUrl: string;
+  objectKey: string;
+  expiresIn: number;
+}
+
+export interface VerificationAnswer {
+  questionId: string;
+  answer: string;
+}
+
+export interface CompleteVerificationInput {
+  objectKey: string;
+  recordingMimeType: 'video/webm';
+  answers: VerificationAnswer[];
+}
+
+export interface VerificationCompletion {
+  verificationId: string;
+  status: VerificationStatus;
+}
