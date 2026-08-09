@@ -4,10 +4,36 @@ import minioClient from '../../shared/config/minio.js'
 import { config } from '../../shared/config/index.js'
 import prisma from '../../shared/config/prisma.js'
 import { AppError } from '../../shared/utils/AppError.js'
+import { assertChallengeOwnership } from './ownership.service.js'
 import { scanObjectForVirus } from './scan.service.js'
 
 const FINAL_STATUSES = new Set(['READY', 'REJECTED', 'SCAN_FAILED', 'EXPIRED'])
 const RECORDING_MIME_TYPE = 'video/webm'
+const SUMMARY_SELECT = { submissionId: true, status: true, completedAt: true, questions: true }
+const DASHBOARD_SELECT = {
+  id: true,
+  submissionId: true,
+  status: true,
+  questions: true,
+  answers: true,
+  selectedOralDurationSeconds: true,
+  actualOralDurationSeconds: true,
+  recordingMimeType: true,
+  recordingSize: true,
+  oralStartedAt: true,
+  oralCompletedAt: true,
+  answeringStartedAt: true,
+  answeringCompletedAt: true,
+  completedAt: true,
+  createdAt: true,
+  cameraInterruptionCount: true,
+  cameraInterruptionDurationSeconds: true,
+  focusLossCount: true,
+  pasteBlockedCount: true,
+  selectAllBlockedCount: true,
+  copyBlockedCount: true,
+  dropBlockedCount: true,
+}
 
 export const createVerificationRecordingObjectKey = () => `verifications/${randomUUID()}.webm`
 
@@ -168,6 +194,116 @@ export const queueVerificationRecordingScan = (verificationId) => {
       console.error(`[Verification Scan Job] ${verificationId}:`, error.message)
     })
   })
+}
+
+const loadEmployerSubmission = async (submissionId, companyId, verificationSelect, database) => {
+  const submission = await database.submission.findUnique({
+    where: { id: submissionId },
+    select: {
+      id: true,
+      challengeId: true,
+      status: true,
+      identityMapping: { select: { isUnlocked: true } },
+      verification: { select: verificationSelect },
+    },
+  })
+  if (!submission) {
+    throw new AppError('Không tìm thấy Submission.', 404, 'VERIFICATION_NOT_FOUND')
+  }
+  const challenge = await database.challenge.findUnique({
+    where: { id: submission.challengeId },
+    select: { id: true, companyId: true },
+  })
+  assertChallengeOwnership(challenge, companyId)
+  if (
+    submission.verification?.submissionId !== undefined &&
+    submission.verification.submissionId !== submission.id
+  ) {
+    throw new AppError(
+      'Verification không thuộc Submission này.',
+      409,
+      'VERIFICATION_INVALID_STATE',
+    )
+  }
+  return submission
+}
+
+const scanStatus = (status) => {
+  if (status === 'PENDING_SCAN') return 'PENDING'
+  if (status === 'READY') return 'SAFE'
+  if (status === 'REJECTED') return 'REJECTED'
+  if (status === 'SCAN_FAILED') return 'SCAN_FAILED'
+  return 'NOT_STARTED'
+}
+
+export const getVerificationSummary = async (submissionId, companyId, database = prisma) => {
+  const submission = await loadEmployerSubmission(submissionId, companyId, SUMMARY_SELECT, database)
+  const verification = submission.verification
+  return {
+    status: verification?.status ?? 'NOT_STARTED',
+    completedAt: verification?.completedAt ?? null,
+    questionCount: Array.isArray(verification?.questions) ? verification.questions.length : 0,
+    scanStatus: scanStatus(verification?.status),
+  }
+}
+
+const assertUnlockedReady = (submission) => {
+  if (!submission.identityMapping?.isUnlocked || submission.status !== 'APPROVED') {
+    throw new AppError(
+      'Verification chỉ được xem sau khi Submission đã unlock.',
+      403,
+      'VERIFICATION_LOCKED',
+    )
+  }
+  if (!submission.verification) {
+    throw new AppError('Không tìm thấy Verification.', 404, 'VERIFICATION_NOT_FOUND')
+  }
+  if (submission.verification.status !== 'READY') {
+    throw new AppError(
+      'Verification chưa hoàn tất kiểm tra an toàn.',
+      409,
+      'VERIFICATION_NOT_READY',
+    )
+  }
+  return submission.verification
+}
+
+export const getVerificationDashboard = async (submissionId, companyId, database = prisma) => {
+  const submission = await loadEmployerSubmission(
+    submissionId,
+    companyId,
+    DASHBOARD_SELECT,
+    database,
+  )
+  return assertUnlockedReady(submission)
+}
+
+const createRecordingDownloadUrl = (objectKey) =>
+  minioClient.presignedGetObject(
+    config.minio.bucket,
+    objectKey,
+    config.minio.presignedExpirySeconds,
+  )
+
+export const getVerificationRecording = async (
+  submissionId,
+  companyId,
+  { database = prisma, presign = createRecordingDownloadUrl } = {},
+) => {
+  const submission = await loadEmployerSubmission(
+    submissionId,
+    companyId,
+    { submissionId: true, status: true, recordingObjectKey: true },
+    database,
+  )
+  const verification = assertUnlockedReady(submission)
+  if (!verification.recordingObjectKey) {
+    throw new AppError('Không tìm thấy video xác thực.', 404, 'VERIFICATION_RECORDING_NOT_FOUND')
+  }
+  return {
+    recordingUrl: await presign(verification.recordingObjectKey),
+    expiresIn: config.minio.presignedExpirySeconds,
+  }
 }
 
 export const completeVerification = async (

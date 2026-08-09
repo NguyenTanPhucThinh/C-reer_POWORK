@@ -12,6 +12,9 @@ import {
   createVerificationEvent,
   completeCandidateVerification,
   createVerificationRecordingUploadUrl,
+  getEmployerVerificationDashboard,
+  getEmployerVerificationRecording,
+  getEmployerVerificationSummary,
   resumeVerification,
   startVerification,
 } from '../controllers/verification.controller.js'
@@ -95,6 +98,27 @@ router.post(
   authorize('CANDIDATE'),
   validateBody(completeVerificationSchema),
   completeCandidateVerification,
+)
+
+router.get(
+  '/submissions/:submission_id/verification-summary',
+  authenticate,
+  authorize('EMPLOYER'),
+  getEmployerVerificationSummary,
+)
+
+router.get(
+  '/submissions/:submission_id/verification-dashboard',
+  authenticate,
+  authorize('EMPLOYER'),
+  getEmployerVerificationDashboard,
+)
+
+router.get(
+  '/submissions/:submission_id/verification-recording',
+  authenticate,
+  authorize('EMPLOYER'),
+  getEmployerVerificationRecording,
 )
 
 // Employer xem danh sách bài nộp — group theo hash_id, nhiều version

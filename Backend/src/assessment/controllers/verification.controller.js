@@ -8,7 +8,11 @@ import { getOrCreateVerificationQuestions } from '../services/verification-quest
 import {
   completeVerification,
   createVerificationRecordingUpload,
+  getVerificationDashboard,
+  getVerificationRecording,
+  getVerificationSummary,
 } from '../services/verification-recording.service.js'
+import * as companyService from '../../iam/services/company.service.js'
 
 const verificationStatusToApi = {
   PENDING_CAMERA: 'PendingCamera',
@@ -92,5 +96,74 @@ export const completeCandidateVerification = async (req, res) => {
   return sendSuccess(res, {
     verification_id: result.verificationId,
     verification_status: verificationStatusToApi[result.status],
+  })
+}
+
+const getEmployerCompanyId = async (userId) => {
+  const company = await companyService.getCompanyByUserId(userId)
+  return company.company_id
+}
+
+export const getEmployerVerificationSummary = async (req, res) => {
+  const companyId = await getEmployerCompanyId(req.user.userId)
+  const summary = await getVerificationSummary(req.params.submission_id, companyId)
+  return sendSuccess(res, {
+    verification_status: verificationStatusToApi[summary.status] ?? 'NotStarted',
+    completed_at: summary.completedAt,
+    question_count: summary.questionCount,
+    scan_status: summary.scanStatus,
+  })
+}
+
+export const getEmployerVerificationDashboard = async (req, res) => {
+  const companyId = await getEmployerCompanyId(req.user.userId)
+  const verification = await getVerificationDashboard(req.params.submission_id, companyId)
+  return sendSuccess(res, {
+    verification_id: verification.id,
+    verification_status: verificationStatusToApi[verification.status],
+    statistics: {
+      question_count: verification.questions.length,
+      selected_oral_duration_seconds: verification.selectedOralDurationSeconds,
+      actual_oral_duration_seconds: verification.actualOralDurationSeconds,
+      camera_interruption_count: verification.cameraInterruptionCount,
+      camera_interruption_duration_seconds: verification.cameraInterruptionDurationSeconds,
+      focus_loss_count: verification.focusLossCount,
+      paste_blocked_count: verification.pasteBlockedCount,
+      select_all_blocked_count: verification.selectAllBlockedCount,
+      copy_blocked_count: verification.copyBlockedCount,
+      drop_blocked_count: verification.dropBlockedCount,
+    },
+    timeline: {
+      created_at: verification.createdAt,
+      oral_started_at: verification.oralStartedAt,
+      oral_completed_at: verification.oralCompletedAt,
+      answering_started_at: verification.answeringStartedAt,
+      answering_completed_at: verification.answeringCompletedAt,
+      completed_at: verification.completedAt,
+    },
+    questions: verification.questions.map((question) => ({
+      question_id: question.questionId,
+      question: question.question,
+      minimum_length: question.minimumLength,
+      maximum_length: question.maximumLength,
+    })),
+    answers: verification.answers.map((answer) => ({
+      question_id: answer.questionId,
+      answer: answer.answer,
+    })),
+    video: {
+      status: 'Ready',
+      recording_mime_type: verification.recordingMimeType,
+      recording_size: verification.recordingSize,
+    },
+  })
+}
+
+export const getEmployerVerificationRecording = async (req, res) => {
+  const companyId = await getEmployerCompanyId(req.user.userId)
+  const recording = await getVerificationRecording(req.params.submission_id, companyId)
+  return sendSuccess(res, {
+    recording_url: recording.recordingUrl,
+    expires_in: recording.expiresIn,
   })
 }
