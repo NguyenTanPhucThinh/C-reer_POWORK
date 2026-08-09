@@ -298,7 +298,7 @@ Hệ thống áp dụng nguyên tắc fail-closed: chỉ `Safe` mới được E
 
 - **Mô tả:** Gửi kết quả chấm điểm Rubric.
 - **Auth:** `Bearer <Employer_Token>`
-- **Ownership & Safety:** Submission phải thuộc Challenge của công ty hiện tại, có `file_status = Safe`, và tất cả `criteria_id` phải thuộc chính Challenge đó. Kiểm tra hoàn tất trước khi tạo Evaluation hoặc đổi status.
+- **Integrity:** Submission phải thuộc Challenge của công ty hiện tại, có `file_status = Safe`, `status = Pending` và chưa unlock. Mỗi `criteria_id` chỉ xuất hiện một lần, phải thuộc chính Challenge đó; `score` phải nằm trong `[0, max_score]`. Mọi kiểm tra hoàn tất trong transaction trước khi tạo Evaluation hoặc đổi status.
 - **Request Body:**
   ```json
   {
@@ -338,6 +338,8 @@ Hệ thống áp dụng nguyên tắc fail-closed: chỉ `Safe` mới được E
     "message": "Cannot evaluate. This submission has already been unlocked and frozen."
   }
   ```
+- **Response (400 Bad Request):** Trả về khi criterion bị lặp, không thuộc Challenge, hoặc `score` vượt ngoài `[0, max_score]`. Không tạo Evaluation Result hay đổi Submission status.
+- **Response (409 Conflict):** Trả về khi Submission không còn ở trạng thái `Pending`. Database đồng thời giữ unique constraint trên cặp `(submission_id, criteria_id)` để không thể sinh hai Evaluation Result hiệu lực khi có request đồng thời.
 
 #### [POST] `/api/v1/assessment/submissions/{submission_id}/reject`
 
@@ -359,7 +361,7 @@ Hệ thống áp dụng nguyên tắc fail-closed: chỉ `Safe` mới được E
 
 - **Mô tả:** Duyệt bài và Mở khóa danh tính (Bắn Event chứa `user_id`, `challenge_id` sang Profile Module xử lý).
 - **Auth:** `Bearer <Employer_Token>`
-- **Ownership & Safety:** Chỉ công ty sở hữu Challenge của Submission mới được approve và unlock. File phải có `file_status = Safe`. Các điều kiện được kiểm tra trong transaction trước mọi thao tác cập nhật status, identity mapping hoặc verified evidence.
+- **Ownership, Safety & Snapshot:** Chỉ công ty sở hữu Challenge của Submission mới được approve và unlock. File phải có `file_status = Safe`, Submission phải ở trạng thái `Evaluated` và có kết quả chấm. Transaction dùng compare-and-set trên `is_unlocked`; mỗi anonymous `hash_id` chỉ tạo được một Verified Evidence. Snapshot đã tạo không bị cập nhật ngược bởi evaluate, reject hoặc unlock lần hai.
 - **Request Body:**
   ```json
   {

@@ -132,6 +132,7 @@ model EvaluationResult {
   submission Submission     @relation(fields: [submissionId], references: [id], onDelete: Cascade)
   criteria   RubricCriteria @relation(fields: [criteriaId], references: [id])
 
+  @@unique([submissionId, criteriaId])
   @@map("evaluation_results")
 }
 
@@ -145,6 +146,7 @@ model EvaluationResult {
 model VerifiedEvidence {
   id            String   @id @default(uuid()) @map("evidence_id")
   userId        String   @map("user_id")          // Lưu như data field
+  sourceHashId  String?  @unique @map("source_hash_id") // Khóa nguồn snapshot; null cho dữ liệu cũ
   challengeName String   @map("challenge_name")   // SNAPSHOT từ Challenge
   companyName   String   @map("company_name")     // SNAPSHOT từ Company
   industry      String                            // SNAPSHOT — dùng vẽ radar chart

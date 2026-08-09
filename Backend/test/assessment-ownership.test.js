@@ -68,13 +68,14 @@ test('criteria ID from another challenge cannot create partial evaluation data',
       findUnique: async () => ({
         id: 'submission-a',
         challengeId: ownChallenge.id,
+        status: 'PENDING',
         fileStatus: 'SAFE',
         identityMapping: { isUnlocked: false },
       }),
       update: async () => writes.push('submission.update'),
     },
     challenge: { findUnique: async () => ownChallenge },
-    rubricCriteria: { count: async () => 0 },
+    rubricCriteria: { findMany: async () => [] },
     evaluationResult: { createMany: async () => writes.push('evaluationResult.createMany') },
   }
   const database = { $transaction: async (work) => work(transaction) }

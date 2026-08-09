@@ -188,16 +188,23 @@ export const unlockCandidate = async (submissionId, companyId, database = prisma
       throw new AppError('Hồ sơ này đã được mở khóa từ trước, không thể mở lại!', 409, 'ASSESS_004')
     }
 
+    if (submission.status !== 'EVALUATED' || submission.evaluationResults.length === 0) {
+      throw new AppError('Submission phải được chấm hợp lệ trước khi unlock.', 409, 'ASSESS_011')
+    }
+
+    // Claim quyền tạo snapshot bằng compare-and-set để hai request đồng thời không cùng thắng.
+    const claimed = await tx.identityMapping.updateMany({
+      where: { hashId: mapping.hashId, isUnlocked: false },
+      data: { isUnlocked: true },
+    })
+    if (claimed.count !== 1) {
+      throw new AppError('Hồ sơ này đã được mở khóa từ trước, không thể mở lại!', 409, 'ASSESS_004')
+    }
+
     // Bước 3: Cập nhật trạng thái bài nộp thành APPROVED
     await tx.submission.update({
       where: { id: submissionId },
       data: { status: 'APPROVED' },
-    })
-
-    // Bước 4: Bật cờ isUnlocked = true cho hồ sơ ẩn danh này
-    await tx.identityMapping.update({
-      where: { hashId: mapping.hashId },
-      data: { isUnlocked: true },
     })
 
     // Bước 5: Tính toán điểm tổng theo trọng số (weighted score) trên thang điểm 100
@@ -216,6 +223,7 @@ export const unlockCandidate = async (submissionId, companyId, database = prisma
     await tx.verifiedEvidence.create({
       data: {
         userId: mapping.userId,
+        sourceHashId: mapping.hashId,
         challengeName: challenge.title,
         companyName: challenge.companyName,
         industry: challenge.industry,
