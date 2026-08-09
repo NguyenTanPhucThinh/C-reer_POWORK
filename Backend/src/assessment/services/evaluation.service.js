@@ -31,12 +31,31 @@ export const evaluateSubmission = async (
       )
     }
 
-    const criteriaIds = [...new Set(evaluations.map((evaluation) => evaluation.criteriaId))]
-    const criteriaCount = await tx.rubricCriteria.count({
+    if (submission.status !== 'PENDING') {
+      throw new AppError('Submission không còn ở trạng thái có thể chấm.', 409, 'ASSESS_011')
+    }
+
+    const criteriaIds = evaluations.map((evaluation) => evaluation.criteriaId)
+    if (new Set(criteriaIds).size !== criteriaIds.length) {
+      throw new AppError('Không được gửi trùng rubric criteria.', 400, 'ASSESS_007')
+    }
+
+    const criteria = await tx.rubricCriteria.findMany({
       where: { id: { in: criteriaIds }, challengeId: submission.challengeId },
+      select: { id: true, maxScore: true },
     })
-    if (criteriaCount !== criteriaIds.length) {
+    if (criteria.length !== criteriaIds.length) {
       throw new AppError('Rubric criteria không thuộc challenge của submission.', 400, 'ASSESS_007')
+    }
+
+    const maxScoreByCriteria = new Map(criteria.map(({ id, maxScore }) => [id, maxScore]))
+    if (
+      evaluations.some(
+        ({ criteriaId, score }) =>
+          !Number.isFinite(score) || score < 0 || score > maxScoreByCriteria.get(criteriaId),
+      )
+    ) {
+      throw new AppError('Điểm phải nằm trong khoảng từ 0 đến maxScore.', 400, 'ASSESS_007')
     }
 
     await tx.evaluationResult.createMany({
