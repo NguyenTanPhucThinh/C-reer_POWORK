@@ -9,17 +9,12 @@
  */
 import prisma from '../../shared/config/prisma.js'
 
-// Tìm IdentityMapping theo user_id + challenge_id — để biết hash_id đã tồn tại chưa
-export const findIdentityMapping = (userId, challengeId) => {
-  return prisma.identityMapping.findFirst({
-    where: { userId, challengeId },
-  })
-}
-
-// Tạo IdentityMapping mới (lần đầu ứng viên nộp bài cho challenge này)
-export const createIdentityMapping = ({ hashId, userId, challengeId }) => {
-  return prisma.identityMapping.create({
-    data: { hashId, userId, challengeId, isUnlocked: false },
+// Database giữ duy nhất một IdentityMapping cho mỗi cặp user_id + challenge_id.
+export const findOrCreateIdentityMapping = ({ hashId, userId, challengeId }, database = prisma) => {
+  return database.identityMapping.upsert({
+    where: { userId_challengeId: { userId, challengeId } },
+    update: {},
+    create: { hashId, userId, challengeId, isUnlocked: false },
   })
 }
 
@@ -46,10 +41,12 @@ export const createSubmission = ({ challengeId, hashId, version, solutionUrl }) 
 }
 
 // Employer xem danh sách bài nộp — group theo hash_id, mỗi hash_id có nhiều version
-export const findSubmissionsByChallengeGroupedByHash = async (challengeId) => {
-  const mappings = await prisma.identityMapping.findMany({
+export const findSubmissionsByChallengeGroupedByHash = async (challengeId, database = prisma) => {
+  const mappings = await database.identityMapping.findMany({
     where: { challengeId },
-    include: {
+    select: {
+      hashId: true,
+      isUnlocked: true,
       submissions: {
         orderBy: { version: 'desc' },
         select: {

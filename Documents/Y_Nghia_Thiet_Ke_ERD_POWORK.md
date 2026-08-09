@@ -41,7 +41,7 @@ Quản lý toàn bộ kho dữ liệu tĩnh liên quan đến đề bài do nhà
 
 - **Bảng Kín `Identity_Mappings`:**
   - Đây là bảng nhạy cảm nhất hệ thống, đóng vai trò làm cầu nối ẩn giữa thông tin thật và danh tính giả.
-  - Nó lưu trữ bộ ba: `hash_id` (Tên giả, VD: `Candidate_7A9B`), `user_id` (ID thật của ứng viên), và `challenge_id`.
+  - Nó lưu trữ bộ ba: `hash_id` (Tên giả 128-bit, VD: `Candidate_9F7A64D4297F45FA1E63B6A027AECE85`), `user_id` (ID thật của ứng viên), và `challenge_id`.
   - Trường `is_unlocked` (Boolean) mặc định là `False`. Khi doanh nghiệp chưa duyệt bài đạt, không một luồng logic nào từ phía client được phép truy cập vào bảng này để lấy ra `user_id`.
 - **Bảng Công khai `Submissions`:**
   - Khóa chính (PK) là `submission_id`. Bảng này **tuyệt đối không có cột `user_id`**. Danh tính ứng viên được nối với bảng kín thông qua chuỗi mã hóa `hash_id`.
@@ -89,14 +89,14 @@ Toàn bộ các trường khóa chính (PK) và khóa quan hệ trong ERD này �
 
 1.  Ứng viên nhấn nút nộp bài. Frontend gửi HTTP Request kèm Token JWT của ứng viên và file bài làm.
 2.  Middleware của hệ thống giải mã JWT để lấy ra `user_id` thật.
-3.  Hệ thống chuyển giao gói tin vào **Assessment Module**. Tại đây, một thuật toán ngẫu nhiên lập tức sinh ra một mã băm định danh (VD: `hash_id = "Candidate_7A9B"`).
+3.  Hệ thống chuyển giao gói tin vào **Assessment Module**. Tại đây, HMAC-SHA256 sinh ra mã định danh 128-bit ổn định theo cặp Candidate–Challenge (VD: `hash_id = "Candidate_9F7A64D4297F45FA1E63B6A027AECE85"`).
 4.  Hệ thống thực hiện 2 thao tác Insert ghi nhận dữ liệu:
     - Ghi cặp quan hệ mật mã `[hash_id, user_id, challenge_id, is_unlocked = False]` vào bảng kín `Identity_Mappings`.
     - Ghi thông tin bài nộp vào bảng công khai `Submissions` với khóa chính là `submission_id` và chứa `hash_id` để nối danh tính (Hoàn toàn sạch bóng thông tin `user_id`).
 
 ### Luồng 2: Doanh nghiệp chấm điểm và mở khóa thông tin (Unlock)
 
-1.  Nhà tuyển dụng vào Dashboard, hệ thống thực hiện `SELECT * FROM Submissions WHERE challenge_id = :id`. Giao diện trả về danh sách bài nộp hiển thị dưới dạng mã ẩn danh (`Candidate_7A9B`). Nhà tuyển dụng xem file giải pháp và tiến hành chấm điểm theo Rubric, lưu kết quả vào bảng `Evaluation_Results`.
+1.  Nhà tuyển dụng vào Dashboard, hệ thống lấy các trường công khai của Submission theo `challenge_id`. Giao diện chỉ hiển thị mã ẩn danh (`Candidate_9F7A64D4297F45FA1E63B6A027AECE85`) và tên file trung tính. Nhà tuyển dụng xem file giải pháp và tiến hành chấm điểm theo Rubric, lưu kết quả vào bảng `Evaluation_Results`.
 2.  Nếu bài làm không đạt, nhà tuyển dụng bấm từ chối, trạng thái `Submissions.status` đổi thành `Rejected`. Bức tường ẩn danh giữ nguyên.
 3.  Nếu bài làm xuất sắc, nhà tuyển dụng bấm nút **"Duyệt & Mở khóa" (Approve & Unlock)**:
     - Hệ thống cập nhật `Submissions.status = 'Approved'`.

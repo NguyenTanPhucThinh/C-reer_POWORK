@@ -15,23 +15,23 @@ import prisma from '../../shared/config/prisma.js'
 import * as submissionRepository from '../repositories/submission.repository.js'
 import * as userLookupService from '../../iam/services/user-lookup.service.js' // IAM Interface
 import { assertChallengeOwnership } from './ownership.service.js'
+import { isSubmissionObjectKey } from './upload.service.js'
 import { queueScanJob } from '../jobs/scan.job.js'
 import { sendSubmissionConfirmationEmail } from './notification.service.js'
 
 // ─── POST /api/v1/assessment/submissions ──────────────────────────────────────
 export const submitSolution = async ({ userId, challengeId, solutionUrl, challengeTitle }) => {
+  if (!isSubmissionObjectKey(solutionUrl, challengeId)) {
+    throw new AppError('Object key của bài nộp không hợp lệ.', 400, 'ASSESS_008')
+  }
+
   // 1. Tìm hoặc tạo IdentityMapping — 1 cặp (user_id, challenge_id) chỉ có 1 hash_id duy nhất,
   //    dù ứng viên nộp lại nhiều lần (version tăng, hash_id giữ nguyên)
-  let mapping = await submissionRepository.findIdentityMapping(userId, challengeId)
-
-  if (!mapping) {
-    const hashId = generateHashId(userId, challengeId)
-    mapping = await submissionRepository.createIdentityMapping({
-      hashId,
-      userId,
-      challengeId,
-    })
-  }
+  const mapping = await submissionRepository.findOrCreateIdentityMapping({
+    hashId: generateHashId(userId, challengeId),
+    userId,
+    challengeId,
+  })
 
   // 2. Tính version tiếp theo — tăng dần nếu ứng viên đã nộp trước đó (TC versioning)
   const latestVersion = await submissionRepository.getLatestVersion(mapping.hashId)

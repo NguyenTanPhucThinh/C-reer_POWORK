@@ -35,10 +35,10 @@ Toàn bộ quá trình nộp bài từ lúc ứng viên ấn nút đến lúc nh
 
 ### Bước 3: Chốt Đơn & Cắt Đứt Danh Tính
 - Nộp lên MinIO xong, Frontend quay lại gọi Backend lần cuối: *"Tôi đã nộp file xong rồi"*.
-- Lúc này, Backend sẽ dùng thuật toán sinh ra một mã số ngẫu nhiên (Ví dụ: `Candidate_8923`).
+- Lúc này, Backend dùng HMAC-SHA256 sinh mã ẩn danh 128-bit ổn định theo Candidate–Challenge (ví dụ: `Candidate_9F7A64D4297F45FA1E63B6A027AECE85`).
 - **Phân tách DB:** 
-  - Backend giấu kín `user_id = 1, hash_id = Candidate_8923` vào bảng `Identity_Mappings` (Bảng KÍN).
-  - Backend lưu `hash_id = Candidate_8923, file_url = ...` vào bảng `Submissions` (Bảng MỞ).
+  - Backend giấu kín cặp `user_id` và `hash_id` vào bảng `Identity_Mappings` (Bảng KÍN).
+  - Backend chỉ lưu `hash_id` và object key không chứa thông tin nhận dạng vào bảng `Submissions` (Bảng MỞ).
   - Từ giờ trở đi, hệ thống chỉ đưa bảng `Submissions` cho Giám khảo chấm.
 
 ### Bước 4: Hậu Kỳ (Quét Virus & Báo Cáo)

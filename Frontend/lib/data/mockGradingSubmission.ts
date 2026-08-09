@@ -78,7 +78,7 @@ export const MOCK_REVIEW_DOCUMENTS: ReviewDocument[] = [
 
 export const MOCK_GRADING_SUBMISSION: GradingSubmission = {
   submission_id: 'f5e921dd-14bb-421c-a32e-11bc9aef4421',
-  hash_id: 'Candidate_3941',
+  hash_id: 'Candidate_9F7A64D4297F45FA1E63B6A027AECE85',
   status: 'Pending',
   challenge_id: '403bf47b-231a-4d22-9214-722a4669812a',
   challenge_title: 'Thiết kế hệ thống caching cho API',

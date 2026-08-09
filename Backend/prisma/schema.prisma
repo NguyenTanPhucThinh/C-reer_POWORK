@@ -87,7 +87,7 @@ model RubricCriteria {
 // KHÔNG expose ra bất kỳ API response nào
 model IdentityMapping {
   id          String   @id @default(uuid())
-  hashId      String   @unique @map("hash_id")    // "Candidate_3941"
+  hashId      String   @unique @map("hash_id")    // "Candidate_9F7A64D4297F45FA1E63B6A027AECE85"
   userId      String   @map("user_id")            // user_id thật — KHÔNG JOIN ra ngoài
   challengeId String   @map("challenge_id")
   isUnlocked  Boolean  @default(false) @map("is_unlocked")
@@ -95,6 +95,7 @@ model IdentityMapping {
 
   submissions Submission[]
 
+  @@unique([userId, challengeId])
   @@map("identity_mappings")
 }
 

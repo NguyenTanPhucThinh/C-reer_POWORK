@@ -9,12 +9,31 @@
  */
 import minioClient from '../../shared/config/minio.js'
 import { config } from '../../shared/config/index.js'
+import { randomUUID } from 'node:crypto'
+import path from 'node:path'
 
-export const generatePresignedUploadUrl = async ({ userId, challengeId, filename }) => {
-  // object_key: submissions/{challenge_id}/{user_id}/{filename}
-  // user_id xuất hiện trong path nội bộ MinIO — KHÔNG bao giờ trả ra response
-  // nào mà Employer xem được (chỉ Backend dùng path này để lưu solution_url)
-  const objectKey = `submissions/${challengeId}/${userId}/${Date.now()}_${filename}`
+const safeExtensionPattern = /^\.[a-z0-9]{1,10}$/
+const anonymousFilePattern =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}(\.[a-z0-9]{1,10})?$/i
+
+export const createSubmissionObjectKey = (challengeId, filename) => {
+  const extension = path.extname(filename).toLowerCase()
+  const safeExtension = safeExtensionPattern.test(extension) ? extension : ''
+  return `submissions/${challengeId}/${randomUUID()}${safeExtension}`
+}
+
+export const isSubmissionObjectKey = (objectKey, challengeId) => {
+  const parts = objectKey.split('/')
+  return (
+    parts.length === 3 &&
+    parts[0] === 'submissions' &&
+    parts[1] === challengeId &&
+    anonymousFilePattern.test(parts[2])
+  )
+}
+
+export const generatePresignedUploadUrl = async ({ challengeId, filename }) => {
+  const objectKey = createSubmissionObjectKey(challengeId, filename)
 
   const uploadUrl = await minioClient.presignedPutObject(
     config.minio.bucket,
