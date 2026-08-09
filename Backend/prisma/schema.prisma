@@ -108,6 +108,7 @@ model Submission {
   version        Int              @default(1)
   solutionUrl    String           @map("solution_url")
   status         SubmissionStatus @default(PENDING)
+  fileStatus     FileScanStatus   @default(AWAITING_UPLOAD) @map("file_status")
   generalComment String?          @map("general_comment")
   submittedAt    DateTime         @default(now()) @map("submitted_at")
 
@@ -173,6 +174,14 @@ enum SubmissionStatus {
   EVALUATED
   APPROVED
   REJECTED
+}
+
+enum FileScanStatus {
+  AWAITING_UPLOAD
+  PENDING_SCAN
+  SAFE
+  REJECTED
+  SCAN_FAILED
 }
 
 // ══════════════════════════════════════════════════════
