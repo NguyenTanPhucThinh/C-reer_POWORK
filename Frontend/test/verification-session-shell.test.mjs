@@ -39,11 +39,10 @@ test('Candidate verification shell is resumable and derives its phase from Backe
   assert.doesNotMatch(page, /apiClient\.|user_id/);
 
   const fullscreenRequest = page.indexOf('document.documentElement.requestFullscreen()');
-  const mediaCheck = page.indexOf('navigator.mediaDevices.getUserMedia');
+  const mediaCheck = page.indexOf('recorder.prepareMedia()');
   const sessionStart = page.indexOf('assessmentAPI.startVerification');
   assert.ok(fullscreenRequest > 0 && fullscreenRequest < mediaCheck);
   assert.ok(mediaCheck < sessionStart);
-  assert.match(page, /mediaStream\?\.getTracks\(\)\.forEach\(\(track\) => track\.stop\(\)\)/);
   assert.match(page, /addEventListener\('fullscreenchange'/);
   assert.match(page, /addEventListener\('visibilitychange'/);
   assert.match(page, /addEventListener\('blur'/);

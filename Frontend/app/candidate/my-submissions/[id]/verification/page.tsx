@@ -6,6 +6,11 @@ import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useReducer, useRef } from 'react';
 import { Badge, Button } from '@/components/ui';
 import { assessmentAPI } from '@/lib/api/endpoints';
+import {
+  VERIFICATION_MAX_FILE_BYTES,
+  useVerificationRecorder,
+  type VerificationRecorderStatus,
+} from '@/lib/hooks/useVerificationRecorder';
 import type {
   ApiErrorBody,
   OralDurationSeconds,
@@ -35,6 +40,7 @@ interface VerificationState {
   error: { title: string; message: string } | null;
   retryAction: RetryAction;
   fullscreenMessage: string | null;
+  recordingError: string | null;
 }
 
 type VerificationAction =
@@ -45,6 +51,7 @@ type VerificationAction =
   | { type: 'FULLSCREEN_LEFT' }
   | { type: 'FULLSCREEN_RESTORED' }
   | { type: 'FULLSCREEN_FAILED' }
+  | { type: 'RECORDING_ERROR'; message: string | null }
   | {
       type: 'FAIL';
       error: VerificationState['error'];
@@ -98,6 +105,7 @@ const initialState: VerificationState = {
   error: null,
   retryAction: null,
   fullscreenMessage: null,
+  recordingError: null,
 };
 
 function verificationReducer(
@@ -112,6 +120,7 @@ function verificationReducer(
         error: null,
         retryAction: null,
         fullscreenMessage: null,
+        recordingError: null,
       };
     case 'SELECT_DURATION':
       return { ...state, oralDurationSeconds: action.duration };
@@ -125,6 +134,7 @@ function verificationReducer(
         session: action.session,
         error: terminalError(action.session.status),
         retryAction: null,
+        recordingError: null,
       };
     case 'FULLSCREEN_LEFT':
       return {
@@ -140,6 +150,8 @@ function verificationReducer(
         fullscreenMessage:
           'Trình duyệt chưa cho phép toàn màn hình. Hãy cấp quyền rồi bấm thử lại.',
       };
+    case 'RECORDING_ERROR':
+      return { ...state, recordingError: action.message };
     case 'FAIL':
       return {
         ...state,
@@ -229,11 +241,21 @@ function describeError(error: unknown): { title: string; message: string; retrya
   };
 }
 
+function describeMediaError(error: unknown): string {
+  if (error instanceof DOMException && error.name === 'NotAllowedError') {
+    return 'Quyền camera hoặc microphone đã bị từ chối. Hãy cấp quyền trong cài đặt trình duyệt rồi thử lại.';
+  }
+  return error instanceof Error
+    ? error.message
+    : 'Không thể chuẩn bị camera và microphone cho phiên xác thực.';
+}
+
 export default function CandidateVerificationPage() {
   const submissionId = getSubmissionId(useParams());
   const [state, dispatch] = useReducer(verificationReducer, initialState);
   const transitionLock = useRef(false);
   const lastFocusLossAt = useRef(0);
+  const recorder = useVerificationRecorder();
 
   const fail = useCallback((error: unknown, retryAction: Exclude<RetryAction, null>) => {
     const detail = describeError(error);
@@ -314,17 +336,10 @@ export default function CandidateVerificationPage() {
       return;
     }
 
-    let mediaStream: MediaStream | null = null;
+    let session: VerificationSession;
     try {
-      if (!navigator.mediaDevices?.getUserMedia) {
-        throw new DOMException('Media devices are not available', 'NotSupportedError');
-      }
-      mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      if (mediaStream.getVideoTracks().length === 0 || mediaStream.getAudioTracks().length === 0) {
-        throw new DOMException('Camera or microphone is missing', 'NotFoundError');
-      }
-
-      const session = await assessmentAPI.startVerification(submissionId, {
+      await recorder.prepareMedia();
+      session = await assessmentAPI.startVerification(submissionId, {
         oralDurationSeconds: state.oralDurationSeconds,
       });
       sessionStorage.setItem(sessionStorageKey(submissionId), session.verificationId);
@@ -337,17 +352,19 @@ export default function CandidateVerificationPage() {
           type: 'FAIL',
           error: {
             title: 'Camera hoặc microphone chưa sẵn sàng',
-            message:
-              'Hãy kết nối thiết bị, cấp quyền camera và microphone cho trình duyệt rồi thử lại.',
+            message: describeMediaError(error),
           },
           retryAction: 'START',
         });
       }
+      recorder.releaseMedia();
       if (document.fullscreenElement) await document.exitFullscreen().catch(() => undefined);
-    } finally {
-      mediaStream?.getTracks().forEach((track) => track.stop());
       transitionLock.current = false;
+      return;
     }
+
+    await beginRecording(session, true);
+    transitionLock.current = false;
   }
 
   const hasSession = state.session !== null;
@@ -362,6 +379,67 @@ export default function CandidateVerificationPage() {
     } catch {
       dispatch({ type: 'FULLSCREEN_FAILED' });
     }
+  }
+
+  async function beginRecording(session: VerificationSession, mediaIsPrepared = false) {
+    let oralStarted = session.status === 'CameraActive';
+    dispatch({ type: 'RECORDING_ERROR', message: null });
+
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+        dispatch({ type: 'FULLSCREEN_RESTORED' });
+      }
+      if (!mediaIsPrepared) await recorder.prepareMedia();
+      await assessmentAPI.sendVerificationEvent(session.verificationId, 'ORAL_STARTED');
+      oralStarted = true;
+      if (session.status === 'CameraActive') {
+        await assessmentAPI.sendVerificationEvent(session.verificationId, 'CAMERA_RESTORED');
+      }
+      const activeSession = { ...session, status: 'CameraActive' as const };
+      dispatch({ type: 'SYNC_SESSION', session: activeSession });
+      recorder.startRecording(session.oralDurationSeconds, {
+        onStarted: () => undefined,
+        onStopped: () => {
+          void assessmentAPI
+            .sendVerificationEvent(session.verificationId, 'ORAL_COMPLETED')
+            .catch((error) =>
+              dispatch({ type: 'RECORDING_ERROR', message: describeError(error).message })
+            );
+        },
+        onCameraInterrupted: () => {
+          void assessmentAPI
+            .sendVerificationEvent(session.verificationId, 'CAMERA_INTERRUPTED')
+            .catch(() => undefined);
+        },
+        onCameraRestored: () => {
+          void assessmentAPI
+            .sendVerificationEvent(session.verificationId, 'CAMERA_RESTORED')
+            .catch(() => undefined);
+        },
+        onError: (message) => dispatch({ type: 'RECORDING_ERROR', message }),
+      });
+    } catch (error) {
+      if (oralStarted) {
+        void assessmentAPI
+          .sendVerificationEvent(session.verificationId, 'CAMERA_INTERRUPTED')
+          .catch(() => undefined);
+      }
+      recorder.releaseMedia();
+      dispatch({
+        type: 'RECORDING_ERROR',
+        message: axios.isAxiosError(error)
+          ? describeError(error).message
+          : describeMediaError(error),
+      });
+    }
+  }
+
+  async function startExistingRecording(session: VerificationSession) {
+    if (transitionLock.current) return;
+    transitionLock.current = true;
+    await beginRecording(session);
+    transitionLock.current = false;
   }
 
   useEffect(() => {
@@ -502,15 +580,32 @@ export default function CandidateVerificationPage() {
           )}
 
           {state.phase === 'PREPARING' && state.session && (
-            <SessionPanel
-              title="Phiên xác thực đã sẵn sàng"
-              message="Phiên đã được tạo và sẽ tiếp tục từ bước chuẩn bị camera ở phần triển khai tiếp theo."
+            <CameraRecordingPanel
               session={state.session}
+              status={recorder.status}
+              elapsedSeconds={recorder.elapsedSeconds}
+              recordingBlob={recorder.recordingBlob}
+              recordingError={state.recordingError}
+              previewRef={recorder.previewRef}
+              onStart={() => void startExistingRecording(state.session!)}
+            />
+          )}
+
+          {state.phase === 'ORAL_ACTIVE' && state.session && (
+            <CameraRecordingPanel
+              session={state.session}
+              status={recorder.status}
+              elapsedSeconds={recorder.elapsedSeconds}
+              recordingBlob={recorder.recordingBlob}
+              recordingError={state.recordingError}
+              previewRef={recorder.previewRef}
+              onStart={() => void startExistingRecording(state.session!)}
             />
           )}
 
           {state.phase !== 'PREPARING' &&
             state.phase !== 'STARTING' &&
+            state.phase !== 'ORAL_ACTIVE' &&
             state.phase !== 'FAILED' &&
             state.phase !== 'COMPLETED' &&
             state.session && (
@@ -577,6 +672,124 @@ export default function CandidateVerificationPage() {
       </div>
     </div>
   );
+}
+
+function CameraRecordingPanel({
+  session,
+  status,
+  elapsedSeconds,
+  recordingBlob,
+  recordingError,
+  previewRef,
+  onStart,
+}: {
+  session: VerificationSession;
+  status: VerificationRecorderStatus;
+  elapsedSeconds: number;
+  recordingBlob: Blob | null;
+  recordingError: string | null;
+  previewRef: (element: HTMLVideoElement | null) => void;
+  onStart: () => void;
+}) {
+  const isRecording = status === 'recording';
+  const canStart = status === 'idle' || status === 'error';
+
+  return (
+    <section className="rounded-xl border-hairline border-border bg-background-secondary p-5 sm:p-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-accent">
+            Trình bày qua camera
+          </p>
+          <h2 className="mt-2 text-2xl font-semibold">Phiên ghi hình xác thực</h2>
+          <p className="mt-2 text-sm leading-6 text-foreground-secondary">
+            Thời lượng tối đa {formatRecordingTime(session.oralDurationSeconds)}. Video sẽ tự dừng
+            khi hết thời gian.
+          </p>
+        </div>
+
+        {isRecording && (
+          <div
+            className="inline-flex items-center gap-2 rounded-full border border-error bg-error-bg px-4 py-2 text-sm font-semibold text-error"
+            role="status"
+            aria-live="polite"
+            aria-label={`Recording, ${formatRecordingTime(elapsedSeconds)}`}
+          >
+            <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-error" aria-hidden="true" />
+            <span>Recording</span>
+            <time dateTime={`PT${elapsedSeconds}S`}>{formatRecordingTime(elapsedSeconds)}</time>
+          </div>
+        )}
+
+        {status === 'interrupted' && (
+          <div
+            className="rounded-full border border-warning bg-warning-bg px-4 py-2 text-sm font-semibold text-warning"
+            role="alert"
+          >
+            Camera tạm gián đoạn
+          </div>
+        )}
+      </div>
+
+      <div className="relative mt-6 aspect-video overflow-hidden rounded-xl bg-black">
+        <video
+          ref={previewRef}
+          autoPlay
+          muted
+          playsInline
+          aria-label="Hình ảnh xem trước từ camera của bạn"
+          className="h-full w-full object-cover [transform:scaleX(-1)]"
+        />
+        {status === 'stopped' && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/70 p-6 text-center text-white">
+            <div>
+              <p className="text-lg font-semibold">Đã ghi hình xong</p>
+              <p className="mt-1 text-sm text-white/75">
+                Video có dung lượng {formatFileSize(recordingBlob?.size ?? 0)} và đã sẵn sàng cho
+                bước tiếp theo.
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {recordingError && (
+        <div
+          className="mt-4 rounded-lg border border-error bg-error-bg p-4 text-sm text-error"
+          role="alert"
+        >
+          {recordingError}
+        </div>
+      )}
+
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
+        <p className="text-xs text-foreground-tertiary">
+          Giới hạn video: {formatFileSize(VERIFICATION_MAX_FILE_BYTES)} · WebM · Camera và
+          microphone
+        </p>
+        {canStart && (
+          <Button type="button" variant="primary" size="lg" onClick={onStart}>
+            {recordingError ? 'Thử ghi hình lại' : 'Bắt đầu ghi hình'}
+          </Button>
+        )}
+        {(status === 'preparing' || status === 'ready') && (
+          <span className="text-sm text-foreground-secondary" role="status" aria-live="polite">
+            Đang chuẩn bị camera và microphone...
+          </span>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function formatRecordingTime(totalSeconds: number): string {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
+
+function formatFileSize(bytes: number): string {
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
 function SessionPanel({
