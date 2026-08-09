@@ -37,6 +37,17 @@ test('Candidate verification shell is resumable and derives its phase from Backe
   assert.match(page, /sessionStorage\.setItem/);
   assert.match(page, /transitionLock\.current/);
   assert.doesNotMatch(page, /apiClient\.|user_id/);
+  assert.match(page, /function VerificationStepProgress/);
+  assert.match(page, /aria-label="Tiến trình xác thực"/);
+  assert.match(page, /aria-current=\{current \? 'step' : undefined\}/);
+  assert.match(page, /const remainingSeconds = Math\.max/);
+  assert.match(page, /Còn \{formatRecordingTime\(remainingSeconds\)\}/);
+  assert.match(page, /motion-reduce:animate-none/);
+  assert.match(page, /motion-reduce:transition-none/);
+  assert.match(page, /focus-visible:ring-2/);
+  assert.match(page, /sm:min-h-56/);
+  assert.match(page, /Không xác định được bài nộp/);
+  assert.doesNotMatch(page, /framer-motion|motion\/react/);
 
   const fullscreenRequest = page.indexOf('document.documentElement.requestFullscreen()');
   const mediaCheck = page.indexOf('recorder.prepareMedia()');

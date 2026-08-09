@@ -135,6 +135,28 @@ const DURATION_OPTIONS: Array<{ value: OralDurationSeconds; label: string }> = [
   { value: 120, label: '2 phút' },
 ];
 
+const VERIFICATION_STEPS = ['Chuẩn bị', 'Trình bày', 'Tự luận', 'Gửi bài', 'Hoàn tất'] as const;
+
+function phaseStepIndex(phase: VerificationPhase, status?: VerificationStatus): number {
+  if (phase === 'STARTING' || phase === 'PREPARING') return 0;
+  if (phase === 'ORAL_ACTIVE') return 1;
+  if (phase === 'GENERATING_QUESTIONS' || phase === 'ANSWERING') return 2;
+  if (
+    phase === 'PREPARING_UPLOAD' ||
+    phase === 'UPLOADING' ||
+    phase === 'COMPLETING' ||
+    phase === 'SCANNING'
+  ) {
+    return 3;
+  }
+  return phase === 'COMPLETED' ||
+    status === 'Rejected' ||
+    status === 'ScanFailed' ||
+    status === 'Expired'
+    ? 4
+    : 0;
+}
+
 const FOCUS_TRACKING_PHASES = new Set<VerificationPhase>([
   'ORAL_ACTIVE',
   'GENERATING_QUESTIONS',
@@ -959,24 +981,34 @@ export default function CandidateVerificationPage() {
   }, [isSessionInProgress]);
 
   return (
-    <div className="min-h-screen bg-background px-4 py-6 text-foreground sm:px-8 lg:px-12">
-      <div className="mx-auto max-w-5xl">
-        <header className="flex flex-col gap-4 border-b-hairline border-border pb-6 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">POWORK</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
-              Xác thực sau khi nộp bài
-            </h1>
-            <p className="mt-2 text-sm text-foreground-secondary">
-              Không đóng hoặc tải lại trang khi một thao tác đang được xử lý.
-            </p>
+    <div className="min-h-screen bg-background px-4 py-4 text-foreground selection:bg-accent-bg selection:text-accent sm:px-6 sm:py-6 lg:px-10">
+      <div className="mx-auto max-w-6xl">
+        <header className="rounded-2xl border-hairline border-border bg-background-secondary p-5 shadow-[var(--shadow-surface)] sm:p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-accent">
+                POWORK · Candidate Verification
+              </p>
+              <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl lg:text-4xl">
+                Xác thực sau khi nộp bài
+              </h1>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-foreground-secondary">
+                Không đóng hoặc tải lại trang khi một thao tác đang được xử lý.
+              </p>
+            </div>
+            <Badge variant={badgeVariant} className="w-fit shrink-0 px-3 py-1 text-xs">
+              {PHASE_LABEL[state.phase]}
+            </Badge>
           </div>
-          <Badge variant={badgeVariant}>{PHASE_LABEL[state.phase]}</Badge>
+          <VerificationStepProgress phase={state.phase} status={state.session?.status} />
         </header>
 
-        <main className="py-8">
+        <main
+          key={state.phase}
+          className="animate-in py-6 fade-in slide-in-from-bottom-2 duration-300 motion-reduce:animate-none motion-reduce:transition-none sm:py-8"
+        >
           {isSessionInProgress && (
-            <section className="mb-5 rounded-xl border-hairline border-border bg-background-secondary p-4 text-sm text-foreground-secondary">
+            <section className="mb-5 rounded-xl border-hairline border-border bg-background-secondary/90 p-4 text-sm leading-6 text-foreground-secondary shadow-sm">
               <p>
                 Trình duyệt sẽ cảnh báo khi bạn tải lại hoặc đóng tab. Hệ thống có thể ghi nhận việc
                 mất tập trung, nhưng không thể và không giả vờ chặn Alt + Tab hay chuyển ứng dụng.
@@ -986,7 +1018,7 @@ export default function CandidateVerificationPage() {
 
           {isSessionInProgress && state.fullscreenMessage && (
             <section
-              className="mb-5 flex flex-col gap-4 rounded-xl border border-warning bg-warning-bg p-4 sm:flex-row sm:items-center sm:justify-between"
+              className="mb-5 flex flex-col gap-4 rounded-xl border border-warning bg-warning-bg p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between"
               role="alert"
             >
               <div>
@@ -999,9 +1031,34 @@ export default function CandidateVerificationPage() {
             </section>
           )}
 
-          {state.phase === 'STARTING' && (
-            <section className="rounded-xl border-hairline border-border bg-background-secondary p-8 text-center">
-              <div className="mx-auto h-9 w-9 animate-spin rounded-full border-2 border-border border-t-accent" />
+          {state.phase === 'STARTING' && !submissionId && (
+            <section
+              className="rounded-2xl border border-warning bg-warning-bg p-8 text-center shadow-[var(--shadow-surface)]"
+              role="alert"
+            >
+              <h2 className="text-xl font-semibold">Không xác định được bài nộp</h2>
+              <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-foreground-secondary">
+                Đường dẫn này không chứa mã Submission hợp lệ. Hãy quay lại danh sách và mở lại bài
+                nộp cần xác thực.
+              </p>
+              <Link
+                href="/candidate/my-submissions"
+                className="mt-6 inline-flex rounded-lg text-sm font-semibold text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+              >
+                Quay lại bài nộp của tôi
+              </Link>
+            </section>
+          )}
+
+          {state.phase === 'STARTING' && submissionId && (
+            <section
+              className="rounded-2xl border-hairline border-border bg-background-secondary p-8 text-center shadow-[var(--shadow-surface)] sm:p-12"
+              aria-live="polite"
+            >
+              <div
+                className="mx-auto h-10 w-10 animate-spin rounded-full border-[3px] border-border border-t-accent motion-reduce:animate-none"
+                aria-hidden="true"
+              />
               <h2 className="mt-5 text-xl font-semibold">Đang kiểm tra phiên xác thực...</h2>
               <p className="mt-2 text-sm text-foreground-secondary">
                 Hệ thống đang khởi tạo hoặc khôi phục đúng bước gần nhất.
@@ -1010,7 +1067,7 @@ export default function CandidateVerificationPage() {
           )}
 
           {state.phase === 'PREPARING' && !hasSession && (
-            <section className="rounded-xl border-hairline border-border bg-background-secondary p-6 sm:p-8">
+            <section className="rounded-2xl border-hairline border-border bg-background-secondary p-6 shadow-[var(--shadow-surface)] sm:p-8">
               <p className="text-xs font-semibold uppercase tracking-wider text-accent">
                 Bước chuẩn bị
               </p>
@@ -1028,10 +1085,10 @@ export default function CandidateVerificationPage() {
                       type="button"
                       aria-pressed={selected}
                       onClick={() => dispatch({ type: 'SELECT_DURATION', duration: option.value })}
-                      className={`rounded-xl border px-4 py-5 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-focus ${
+                      className={`rounded-xl border px-4 py-5 text-sm font-semibold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background-secondary motion-reduce:transition-none ${
                         selected
-                          ? 'border-accent bg-accent-bg text-accent'
-                          : 'border-border bg-background text-foreground-secondary hover:border-border-secondary'
+                          ? 'border-accent bg-accent-bg text-accent shadow-sm'
+                          : 'border-border bg-background text-foreground-secondary hover:-translate-y-0.5 hover:border-border-secondary motion-reduce:hover:translate-y-0'
                       }`}
                     >
                       {option.label}
@@ -1067,7 +1124,7 @@ export default function CandidateVerificationPage() {
 
           {state.phase === 'ORAL_ACTIVE' && state.session && state.questionError && (
             <section
-              className="rounded-xl border border-warning bg-warning-bg p-6 sm:p-8"
+              className="rounded-2xl border border-warning bg-warning-bg p-6 shadow-[var(--shadow-surface)] sm:p-8"
               role="alert"
             >
               <p className="text-xs font-semibold uppercase tracking-wider text-warning">
@@ -1107,10 +1164,14 @@ export default function CandidateVerificationPage() {
           {(state.phase === 'GENERATING_QUESTIONS' ||
             (state.phase === 'ANSWERING' && state.questions.length === 0)) && (
             <section
-              className="rounded-xl border-hairline border-border bg-background-secondary p-8 text-center"
+              className="rounded-2xl border-hairline border-border bg-background-secondary p-8 text-center shadow-[var(--shadow-surface)] sm:p-12"
+              role="status"
               aria-live="polite"
             >
-              <div className="mx-auto h-9 w-9 animate-spin rounded-full border-2 border-border border-t-accent" />
+              <div
+                className="mx-auto h-10 w-10 animate-spin rounded-full border-[3px] border-border border-t-accent motion-reduce:animate-none"
+                aria-hidden="true"
+              />
               <h2 className="mt-5 text-xl font-semibold">Đang chuẩn bị câu hỏi tự luận...</h2>
               <p className="mt-2 text-sm text-foreground-secondary">
                 Bộ câu hỏi được tạo một lần từ nội dung Challenge và sẽ không thể đổi sang bộ khác.
@@ -1165,17 +1226,25 @@ export default function CandidateVerificationPage() {
             )}
 
           {state.phase === 'COMPLETED' && state.session && (
-            <section className="rounded-xl border border-success bg-success-bg p-6 sm:p-8">
+            <section className="overflow-hidden rounded-2xl border border-success bg-success-bg p-6 shadow-[var(--shadow-surface)] sm:p-10">
+              <div
+                className="mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-success text-2xl font-bold text-white shadow-md"
+                aria-hidden="true"
+              >
+                ✓
+              </div>
               <p className="text-xs font-semibold uppercase tracking-wider text-success">
                 Hoàn tất
               </p>
-              <h2 className="mt-2 text-2xl font-semibold">Cảm ơn bạn đã hoàn thành xác thực</h2>
-              <p className="mt-2 text-sm leading-6 text-foreground-secondary">
+              <h2 className="mt-2 text-2xl font-semibold sm:text-3xl">
+                Cảm ơn bạn đã hoàn thành xác thực
+              </h2>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-foreground-secondary">
                 Phiên đã được Backend xác nhận hoàn tất. Chúc bạn có một buổi phỏng vấn thuận lợi.
               </p>
               <Link
                 href="/candidate/my-submissions"
-                className="mt-6 inline-block text-sm font-semibold text-accent hover:underline"
+                className="mt-7 inline-flex rounded-lg text-sm font-semibold text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-4 focus-visible:ring-offset-success-bg"
               >
                 Quay lại bài nộp của tôi
               </Link>
@@ -1183,7 +1252,16 @@ export default function CandidateVerificationPage() {
           )}
 
           {state.phase === 'FAILED' && state.error && (
-            <section className="rounded-xl border border-error bg-error-bg p-6 sm:p-8" role="alert">
+            <section
+              className="rounded-2xl border border-error bg-error-bg p-6 shadow-[var(--shadow-surface)] sm:p-8"
+              role="alert"
+            >
+              <div
+                className="mb-5 flex h-12 w-12 items-center justify-center rounded-full border border-error bg-background text-xl font-bold text-error"
+                aria-hidden="true"
+              >
+                !
+              </div>
               <p className="text-xs font-semibold uppercase tracking-wider text-error">
                 Không thể tiếp tục
               </p>
@@ -1205,7 +1283,7 @@ export default function CandidateVerificationPage() {
                 )}
                 <Link
                   href="/candidate/my-submissions"
-                  className="inline-flex items-center text-sm font-semibold text-accent hover:underline"
+                  className="inline-flex items-center rounded-lg px-2 py-1 text-sm font-semibold text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                 >
                   Quay lại bài nộp của tôi
                 </Link>
@@ -1214,14 +1292,14 @@ export default function CandidateVerificationPage() {
           )}
         </main>
 
-        <footer className="border-t-hairline border-border py-5 text-xs text-foreground-tertiary">
+        <footer className="border-t-hairline border-border py-5 text-center text-xs text-foreground-tertiary sm:text-left">
           Mã Submission: <span className="font-mono">{submissionId || 'Không xác định'}</span>
         </footer>
       </div>
 
       {state.notice && (
         <div
-          className="fixed bottom-6 left-1/2 z-50 max-w-sm -translate-x-1/2 rounded-lg border-hairline border-border bg-foreground px-4 py-3 text-center text-sm text-background shadow-lg"
+          className="animate-in fixed bottom-4 left-1/2 z-50 w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 rounded-xl border-hairline border-border bg-foreground px-4 py-3 text-center text-sm text-background shadow-lg fade-in slide-in-from-bottom-2 motion-reduce:animate-none sm:bottom-6"
           role="status"
           aria-live="polite"
         >
@@ -1236,6 +1314,66 @@ type BlockedTypingEvent = Extract<
   VerificationEvent,
   'PASTE_BLOCKED' | 'COPY_BLOCKED' | 'DROP_BLOCKED' | 'SELECT_ALL_BLOCKED'
 >;
+
+function VerificationStepProgress({
+  phase,
+  status,
+}: {
+  phase: VerificationPhase;
+  status?: VerificationStatus;
+}) {
+  const activeStep = phaseStepIndex(phase, status);
+
+  return (
+    <nav
+      className="relative mt-6 border-t-hairline border-border pt-5"
+      aria-label="Tiến trình xác thực"
+    >
+      <div
+        className="absolute left-[10%] right-[10%] top-[34px] h-0.5 bg-border"
+        aria-hidden="true"
+      >
+        <div
+          className="h-full bg-accent transition-[width] duration-500 motion-reduce:transition-none"
+          style={{ width: `${(activeStep / (VERIFICATION_STEPS.length - 1)) * 100}%` }}
+        />
+      </div>
+      <ol className="relative grid grid-cols-5 gap-1">
+        {VERIFICATION_STEPS.map((label, index) => {
+          const completed = index < activeStep;
+          const current = index === activeStep;
+          return (
+            <li
+              key={label}
+              className="flex min-w-0 flex-col items-center gap-2 text-center"
+              aria-current={current ? 'step' : undefined}
+            >
+              <span
+                className={`relative z-10 flex h-7 w-7 items-center justify-center rounded-full border text-xs font-bold transition-colors motion-reduce:transition-none sm:h-8 sm:w-8 ${
+                  completed
+                    ? 'border-accent bg-accent text-white'
+                    : current
+                      ? 'border-accent bg-background text-accent ring-4 ring-accent-bg'
+                      : 'border-border-secondary bg-background text-foreground-tertiary'
+                }`}
+                aria-hidden="true"
+              >
+                {completed ? '✓' : index + 1}
+              </span>
+              <span
+                className={`text-[10px] font-medium leading-tight sm:text-xs ${
+                  current ? 'text-foreground' : 'text-foreground-tertiary'
+                }`}
+              >
+                {label}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
+  );
+}
 
 function EssayAnsweringPanel({
   questions,
@@ -1258,7 +1396,7 @@ function EssayAnsweringPanel({
   });
 
   return (
-    <section className="rounded-xl border-hairline border-border bg-background-secondary p-5 sm:p-8">
+    <section className="rounded-2xl border-hairline border-border bg-background-secondary p-5 shadow-[var(--shadow-surface)] sm:p-8">
       <p className="text-xs font-semibold uppercase tracking-wider text-accent">Câu hỏi tự luận</p>
       <h2 className="mt-2 text-2xl font-semibold">Trình bày hiểu biết của bạn</h2>
       <p className="mt-2 max-w-3xl text-sm leading-6 text-foreground-secondary">
@@ -1280,16 +1418,24 @@ function EssayAnsweringPanel({
           return (
             <article
               key={question.questionId}
-              className="rounded-xl border-hairline border-border bg-background p-5"
+              className="rounded-2xl border-hairline border-border bg-background p-5 shadow-sm transition-[border-color,box-shadow] focus-within:border-accent/70 focus-within:shadow-md motion-reduce:transition-none sm:p-6"
             >
-              <div className="flex items-start justify-between gap-4">
-                <label
-                  htmlFor={`answer-${question.questionId}`}
-                  className="font-semibold leading-6"
-                >
-                  Câu {index + 1}. {question.question}
-                </label>
-                <Badge variant={isValid ? 'done' : 'blind'}>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                <div className="flex min-w-0 items-start gap-3">
+                  <span
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent-bg text-sm font-bold text-accent"
+                    aria-hidden="true"
+                  >
+                    {index + 1}
+                  </span>
+                  <label
+                    htmlFor={`answer-${question.questionId}`}
+                    className="pt-1 font-semibold leading-6"
+                  >
+                    {question.question}
+                  </label>
+                </div>
+                <Badge variant={isValid ? 'done' : 'blind'} className="w-fit shrink-0">
                   {isValid ? 'Đủ điều kiện' : `Tối thiểu ${question.minimumLength}`}
                 </Badge>
               </div>
@@ -1315,7 +1461,7 @@ function EssayAnsweringPanel({
                   if (inputType === 'insertFromDrop') block(event, 'DROP_BLOCKED');
                 }}
                 aria-describedby={`answer-help-${question.questionId}`}
-                className="mt-4 w-full resize-y rounded-lg border-hairline border-border bg-background-secondary px-4 py-3 text-sm leading-6 text-foreground outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-focus"
+                className="mt-5 min-h-48 w-full resize-y rounded-xl border-hairline border-border bg-background-secondary px-4 py-3 text-sm leading-6 text-foreground outline-none transition-colors placeholder:text-foreground-tertiary focus:border-accent focus:ring-2 focus:ring-focus motion-reduce:transition-none sm:min-h-56"
               />
 
               <div
@@ -1406,7 +1552,7 @@ function EvidenceUploadPanel({
 
   return (
     <section
-      className="rounded-xl border-hairline border-border bg-background-secondary p-6 sm:p-8"
+      className="rounded-2xl border-hairline border-border bg-background-secondary p-6 shadow-[var(--shadow-surface)] sm:p-8"
       aria-live="polite"
     >
       <p className="text-xs font-semibold uppercase tracking-wider text-accent">Hoàn tất phiên</p>
@@ -1419,12 +1565,12 @@ function EvidenceUploadPanel({
 
       {(phase === 'UPLOADING' || progress > 0) && (
         <div className="mt-6">
-          <div className="mb-2 flex justify-between text-xs text-foreground-tertiary">
+          <div className="mb-2 flex justify-between text-xs font-medium text-foreground-secondary">
             <span>Upload video WebM</span>
-            <span>{progress}%</span>
+            <span className="font-mono tabular-nums text-foreground">{progress}%</span>
           </div>
           <div
-            className="h-2 overflow-hidden rounded-full bg-background-tertiary"
+            className="h-3 overflow-hidden rounded-full border-hairline border-border bg-background-tertiary"
             role="progressbar"
             aria-label="Tiến độ upload video"
             aria-valuemin={0}
@@ -1432,7 +1578,7 @@ function EvidenceUploadPanel({
             aria-valuenow={progress}
           >
             <div
-              className="h-full bg-accent transition-[width]"
+              className="h-full rounded-full bg-accent transition-[width] duration-300 motion-reduce:transition-none"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -1441,7 +1587,7 @@ function EvidenceUploadPanel({
 
       {error && (
         <div
-          className="mt-5 rounded-lg border border-warning bg-warning-bg p-4 text-sm text-warning"
+          className="mt-5 rounded-xl border border-warning bg-warning-bg p-4 text-sm font-medium leading-6 text-warning"
           role="alert"
         >
           {error.message}
@@ -1480,9 +1626,11 @@ function CameraRecordingPanel({
 }) {
   const isRecording = status === 'recording';
   const canStart = status === 'idle' || status === 'error';
+  const remainingSeconds = Math.max(session.oralDurationSeconds - elapsedSeconds, 0);
+  const recordingProgress = Math.min((elapsedSeconds / session.oralDurationSeconds) * 100, 100);
 
   return (
-    <section className="rounded-xl border-hairline border-border bg-background-secondary p-5 sm:p-8">
+    <section className="rounded-2xl border-hairline border-border bg-background-secondary p-5 shadow-[var(--shadow-surface)] sm:p-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-accent">
@@ -1496,19 +1644,6 @@ function CameraRecordingPanel({
           </p>
         </div>
 
-        {isRecording && (
-          <div
-            className="inline-flex items-center gap-2 rounded-full border border-error bg-error-bg px-4 py-2 text-sm font-semibold text-error"
-            role="status"
-            aria-live="polite"
-            aria-label={`Recording, ${formatRecordingTime(elapsedSeconds)}`}
-          >
-            <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-error" aria-hidden="true" />
-            <span>Recording</span>
-            <time dateTime={`PT${elapsedSeconds}S`}>{formatRecordingTime(elapsedSeconds)}</time>
-          </div>
-        )}
-
         {status === 'interrupted' && (
           <div
             className="rounded-full border border-warning bg-warning-bg px-4 py-2 text-sm font-semibold text-warning"
@@ -1519,7 +1654,7 @@ function CameraRecordingPanel({
         )}
       </div>
 
-      <div className="relative mt-6 aspect-video overflow-hidden rounded-xl bg-black">
+      <div className="relative mt-6 aspect-video overflow-hidden rounded-2xl border border-border-secondary bg-black shadow-2xl ring-1 ring-white/10">
         <video
           ref={previewRef}
           autoPlay
@@ -1528,6 +1663,34 @@ function CameraRecordingPanel({
           aria-label="Hình ảnh xem trước từ camera của bạn"
           className="h-full w-full object-cover [transform:scaleX(-1)]"
         />
+        {isRecording && (
+          <div
+            className="absolute left-3 top-3 inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/75 px-3 py-2 text-xs font-semibold text-white shadow-lg backdrop-blur-sm sm:left-4 sm:top-4 sm:px-4 sm:text-sm"
+            role="status"
+            aria-live="polite"
+            aria-label={`Đang ghi hình, còn ${formatRecordingTime(remainingSeconds)}`}
+          >
+            <span
+              className="h-2.5 w-2.5 animate-pulse rounded-full bg-red-500 shadow-[0_0_0_4px_rgba(239,68,68,0.2)] motion-reduce:animate-none"
+              aria-hidden="true"
+            />
+            <span>Recording</span>
+            <span className="text-white/60" aria-hidden="true">
+              ·
+            </span>
+            <time className="font-mono tabular-nums" dateTime={`PT${remainingSeconds}S`}>
+              Còn {formatRecordingTime(remainingSeconds)}
+            </time>
+          </div>
+        )}
+        {isRecording && (
+          <div className="absolute inset-x-0 bottom-0 h-1.5 bg-white/20" aria-hidden="true">
+            <div
+              className="h-full bg-red-500 transition-[width] duration-300 motion-reduce:transition-none"
+              style={{ width: `${recordingProgress}%` }}
+            />
+          </div>
+        )}
         {status === 'stopped' && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/70 p-6 text-center text-white">
             <div>
