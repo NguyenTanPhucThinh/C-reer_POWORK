@@ -14,6 +14,7 @@ import {
 import type {
   ApiErrorBody,
   OralDurationSeconds,
+  VerificationEvent,
   VerificationSession,
   VerificationStatus,
 } from '@/lib/types';
@@ -41,6 +42,7 @@ interface VerificationState {
   retryAction: RetryAction;
   fullscreenMessage: string | null;
   recordingError: string | null;
+  oralCompleted: boolean;
 }
 
 type VerificationAction =
@@ -52,6 +54,7 @@ type VerificationAction =
   | { type: 'FULLSCREEN_RESTORED' }
   | { type: 'FULLSCREEN_FAILED' }
   | { type: 'RECORDING_ERROR'; message: string | null }
+  | { type: 'ORAL_COMPLETED_CONFIRMED' }
   | {
       type: 'FAIL';
       error: VerificationState['error'];
@@ -106,6 +109,7 @@ const initialState: VerificationState = {
   retryAction: null,
   fullscreenMessage: null,
   recordingError: null,
+  oralCompleted: false,
 };
 
 function verificationReducer(
@@ -121,6 +125,7 @@ function verificationReducer(
         retryAction: null,
         fullscreenMessage: null,
         recordingError: null,
+        oralCompleted: false,
       };
     case 'SELECT_DURATION':
       return { ...state, oralDurationSeconds: action.duration };
@@ -135,6 +140,7 @@ function verificationReducer(
         error: terminalError(action.session.status),
         retryAction: null,
         recordingError: null,
+        oralCompleted: false,
       };
     case 'FULLSCREEN_LEFT':
       return {
@@ -152,6 +158,8 @@ function verificationReducer(
       };
     case 'RECORDING_ERROR':
       return { ...state, recordingError: action.message };
+    case 'ORAL_COMPLETED_CONFIRMED':
+      return { ...state, oralCompleted: true, recordingError: null };
     case 'FAIL':
       return {
         ...state,
@@ -250,12 +258,41 @@ function describeMediaError(error: unknown): string {
     : 'Không thể chuẩn bị camera và microphone cho phiên xác thực.';
 }
 
+function isRetryableEventError(error: unknown): boolean {
+  return (
+    axios.isAxiosError(error) &&
+    (!error.response || error.response.status === 429 || error.response.status >= 500)
+  );
+}
+
+async function sendVerificationEventWithRetry(
+  verificationId: string,
+  event: VerificationEvent,
+  maximumAttempts: number
+): Promise<void> {
+  for (let attempt = 1; attempt <= maximumAttempts; attempt += 1) {
+    try {
+      await assessmentAPI.sendVerificationEvent(verificationId, event);
+      return;
+    } catch (error) {
+      if (attempt === maximumAttempts || !isRetryableEventError(error)) throw error;
+      await new Promise((resolve) => window.setTimeout(resolve, attempt * 250));
+    }
+  }
+}
+
 export default function CandidateVerificationPage() {
   const submissionId = getSubmissionId(useParams());
   const [state, dispatch] = useReducer(verificationReducer, initialState);
   const transitionLock = useRef(false);
   const lastFocusLossAt = useRef(0);
   const recorder = useVerificationRecorder();
+  const oralStartedId = useRef<string | null>(null);
+  const oralCompletedId = useRef<string | null>(null);
+  const oralStartRequest = useRef<{ id: string; promise: Promise<void> } | null>(null);
+  const oralCompleteRequest = useRef<{ id: string; promise: Promise<void> } | null>(null);
+  const cameraInterruptedId = useRef<string | null>(null);
+  const cameraInterruptionRequest = useRef<{ id: string; promise: Promise<void> } | null>(null);
 
   const fail = useCallback((error: unknown, retryAction: Exclude<RetryAction, null>) => {
     const detail = describeError(error);
@@ -264,6 +301,73 @@ export default function CandidateVerificationPage() {
       error: { title: detail.title, message: detail.message },
       retryAction: detail.retryable ? retryAction : undefined,
     });
+  }, []);
+
+  const sendOralStarted = useCallback((verificationId: string) => {
+    if (oralStartedId.current === verificationId) return Promise.resolve();
+    if (oralStartRequest.current?.id === verificationId) {
+      return oralStartRequest.current.promise;
+    }
+
+    const request: Promise<void> = sendVerificationEventWithRetry(verificationId, 'ORAL_STARTED', 3)
+      .then(() => {
+        oralStartedId.current = verificationId;
+      })
+      .finally(() => {
+        if (oralStartRequest.current?.promise === request) oralStartRequest.current = null;
+      });
+    oralStartRequest.current = { id: verificationId, promise: request };
+    return request;
+  }, []);
+
+  const sendOralCompleted = useCallback((verificationId: string) => {
+    if (oralCompletedId.current === verificationId) return Promise.resolve();
+    if (oralCompleteRequest.current?.id === verificationId) {
+      return oralCompleteRequest.current.promise;
+    }
+
+    const request: Promise<void> = sendVerificationEventWithRetry(
+      verificationId,
+      'ORAL_COMPLETED',
+      3
+    )
+      .then(() => {
+        oralCompletedId.current = verificationId;
+      })
+      .finally(() => {
+        if (oralCompleteRequest.current?.promise === request) oralCompleteRequest.current = null;
+      });
+    oralCompleteRequest.current = { id: verificationId, promise: request };
+    return request;
+  }, []);
+
+  const sendCameraInterrupted = useCallback((verificationId: string) => {
+    if (cameraInterruptedId.current === verificationId) return;
+    cameraInterruptedId.current = verificationId;
+
+    const request = sendVerificationEventWithRetry(verificationId, 'CAMERA_INTERRUPTED', 2).catch(
+      (error) => {
+        if (cameraInterruptedId.current === verificationId) cameraInterruptedId.current = null;
+        dispatch({ type: 'RECORDING_ERROR', message: describeError(error).message });
+      }
+    );
+    cameraInterruptionRequest.current = { id: verificationId, promise: request };
+  }, []);
+
+  const sendCameraRestored = useCallback(async (verificationId: string) => {
+    if (cameraInterruptedId.current !== verificationId) return;
+    if (cameraInterruptionRequest.current?.id === verificationId) {
+      await cameraInterruptionRequest.current.promise;
+    }
+    if (cameraInterruptedId.current !== verificationId) return;
+
+    try {
+      await sendVerificationEventWithRetry(verificationId, 'CAMERA_RESTORED', 2);
+      cameraInterruptedId.current = null;
+      cameraInterruptionRequest.current = null;
+    } catch (error) {
+      dispatch({ type: 'RECORDING_ERROR', message: describeError(error).message });
+    }
   }, []);
 
   const resumeSession = useCallback(async () => {
@@ -290,6 +394,7 @@ export default function CandidateVerificationPage() {
         });
         return;
       }
+      if (session.status === 'CameraActive') oralStartedId.current = session.verificationId;
       dispatch({ type: 'SYNC_SESSION', session });
       const resumedPhase = STATUS_PHASE[session.status];
       if (
@@ -382,7 +487,7 @@ export default function CandidateVerificationPage() {
   }
 
   async function beginRecording(session: VerificationSession, mediaIsPrepared = false) {
-    let oralStarted = session.status === 'CameraActive';
+    if (session.status === 'CameraActive') oralStartedId.current = session.verificationId;
     dispatch({ type: 'RECORDING_ERROR', message: null });
 
     try {
@@ -391,39 +496,21 @@ export default function CandidateVerificationPage() {
         dispatch({ type: 'FULLSCREEN_RESTORED' });
       }
       if (!mediaIsPrepared) await recorder.prepareMedia();
-      await assessmentAPI.sendVerificationEvent(session.verificationId, 'ORAL_STARTED');
-      oralStarted = true;
-      if (session.status === 'CameraActive') {
-        await assessmentAPI.sendVerificationEvent(session.verificationId, 'CAMERA_RESTORED');
-      }
+      await sendOralStarted(session.verificationId);
       const activeSession = { ...session, status: 'CameraActive' as const };
       dispatch({ type: 'SYNC_SESSION', session: activeSession });
       recorder.startRecording(session.oralDurationSeconds, {
         onStarted: () => undefined,
         onStopped: () => {
-          void assessmentAPI
-            .sendVerificationEvent(session.verificationId, 'ORAL_COMPLETED')
-            .catch((error) =>
-              dispatch({ type: 'RECORDING_ERROR', message: describeError(error).message })
-            );
+          void confirmOralCompleted(session.verificationId);
         },
-        onCameraInterrupted: () => {
-          void assessmentAPI
-            .sendVerificationEvent(session.verificationId, 'CAMERA_INTERRUPTED')
-            .catch(() => undefined);
-        },
-        onCameraRestored: () => {
-          void assessmentAPI
-            .sendVerificationEvent(session.verificationId, 'CAMERA_RESTORED')
-            .catch(() => undefined);
-        },
+        onCameraInterrupted: () => sendCameraInterrupted(session.verificationId),
+        onCameraRestored: () => void sendCameraRestored(session.verificationId),
         onError: (message) => dispatch({ type: 'RECORDING_ERROR', message }),
       });
     } catch (error) {
-      if (oralStarted) {
-        void assessmentAPI
-          .sendVerificationEvent(session.verificationId, 'CAMERA_INTERRUPTED')
-          .catch(() => undefined);
+      if (oralStartedId.current === session.verificationId) {
+        sendCameraInterrupted(session.verificationId);
       }
       recorder.releaseMedia();
       dispatch({
@@ -432,6 +519,15 @@ export default function CandidateVerificationPage() {
           ? describeError(error).message
           : describeMediaError(error),
       });
+    }
+  }
+
+  async function confirmOralCompleted(verificationId: string) {
+    try {
+      await sendOralCompleted(verificationId);
+      dispatch({ type: 'ORAL_COMPLETED_CONFIRMED' });
+    } catch (error) {
+      dispatch({ type: 'RECORDING_ERROR', message: describeError(error).message });
     }
   }
 
@@ -454,14 +550,13 @@ export default function CandidateVerificationPage() {
 
   useEffect(() => {
     if (!state.session || !FOCUS_TRACKING_PHASES.has(state.phase)) return;
+    const verificationId = state.session.verificationId;
 
     const reportFocusLoss = () => {
       const now = Date.now();
       if (now - lastFocusLossAt.current < 750) return;
       lastFocusLossAt.current = now;
-      void assessmentAPI
-        .sendVerificationEvent(state.session!.verificationId, 'FOCUS_LOST')
-        .catch(() => undefined);
+      void sendVerificationEventWithRetry(verificationId, 'FOCUS_LOST', 2).catch(() => undefined);
     };
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') reportFocusLoss();
@@ -586,8 +681,10 @@ export default function CandidateVerificationPage() {
               elapsedSeconds={recorder.elapsedSeconds}
               recordingBlob={recorder.recordingBlob}
               recordingError={state.recordingError}
+              oralCompleted={state.oralCompleted}
               previewRef={recorder.previewRef}
               onStart={() => void startExistingRecording(state.session!)}
+              onRetryCompletion={() => void confirmOralCompleted(state.session!.verificationId)}
             />
           )}
 
@@ -598,8 +695,10 @@ export default function CandidateVerificationPage() {
               elapsedSeconds={recorder.elapsedSeconds}
               recordingBlob={recorder.recordingBlob}
               recordingError={state.recordingError}
+              oralCompleted={state.oralCompleted}
               previewRef={recorder.previewRef}
               onStart={() => void startExistingRecording(state.session!)}
+              onRetryCompletion={() => void confirmOralCompleted(state.session!.verificationId)}
             />
           )}
 
@@ -680,16 +779,20 @@ function CameraRecordingPanel({
   elapsedSeconds,
   recordingBlob,
   recordingError,
+  oralCompleted,
   previewRef,
   onStart,
+  onRetryCompletion,
 }: {
   session: VerificationSession;
   status: VerificationRecorderStatus;
   elapsedSeconds: number;
   recordingBlob: Blob | null;
   recordingError: string | null;
+  oralCompleted: boolean;
   previewRef: (element: HTMLVideoElement | null) => void;
   onStart: () => void;
+  onRetryCompletion: () => void;
 }) {
   const isRecording = status === 'recording';
   const canStart = status === 'idle' || status === 'error';
@@ -704,7 +807,8 @@ function CameraRecordingPanel({
           <h2 className="mt-2 text-2xl font-semibold">Phiên ghi hình xác thực</h2>
           <p className="mt-2 text-sm leading-6 text-foreground-secondary">
             Thời lượng tối đa {formatRecordingTime(session.oralDurationSeconds)}. Video sẽ tự dừng
-            khi hết thời gian.
+            khi hết thời gian. Đồng hồ này chỉ hỗ trợ trải nghiệm; Backend quyết định thời lượng
+            chính thức.
           </p>
         </div>
 
@@ -745,8 +849,10 @@ function CameraRecordingPanel({
             <div>
               <p className="text-lg font-semibold">Đã ghi hình xong</p>
               <p className="mt-1 text-sm text-white/75">
-                Video có dung lượng {formatFileSize(recordingBlob?.size ?? 0)} và đã sẵn sàng cho
-                bước tiếp theo.
+                Video có dung lượng {formatFileSize(recordingBlob?.size ?? 0)}.{' '}
+                {oralCompleted
+                  ? 'Backend đã xác nhận giai đoạn trình bày.'
+                  : 'Đang chờ Backend xác nhận giai đoạn trình bày.'}
               </p>
             </div>
           </div>
@@ -770,6 +876,11 @@ function CameraRecordingPanel({
         {canStart && (
           <Button type="button" variant="primary" size="lg" onClick={onStart}>
             {recordingError ? 'Thử ghi hình lại' : 'Bắt đầu ghi hình'}
+          </Button>
+        )}
+        {status === 'stopped' && recordingError && !oralCompleted && (
+          <Button type="button" variant="primary" onClick={onRetryCompletion}>
+            Thử xác nhận lại
           </Button>
         )}
         {(status === 'preparing' || status === 'ready') && (

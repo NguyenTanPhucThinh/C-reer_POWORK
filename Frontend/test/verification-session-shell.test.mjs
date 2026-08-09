@@ -48,7 +48,7 @@ test('Candidate verification shell is resumable and derives its phase from Backe
   assert.match(page, /addEventListener\('blur'/);
   assert.match(page, /addEventListener\('beforeunload'/);
   assert.match(page, /now - lastFocusLossAt\.current < 750/);
-  assert.match(page, /sendVerificationEvent\(state\.session!\.verificationId, 'FOCUS_LOST'\)/);
+  assert.match(page, /sendVerificationEventWithRetry\(verificationId, 'FOCUS_LOST', 2\)/);
   assert.match(page, /Quay lại toàn màn hình/);
   assert.doesNotMatch(page, /addEventListener\('keydown'/);
 

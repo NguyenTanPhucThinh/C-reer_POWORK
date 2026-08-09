@@ -33,4 +33,14 @@ test('Verification recorder fails unsupported browsers early and records bounded
   for (const event of ['ORAL_STARTED', 'ORAL_COMPLETED', 'CAMERA_INTERRUPTED', 'CAMERA_RESTORED']) {
     assert.match(page, new RegExp(`'${event}'`));
   }
+
+  assert.match(page, /sendVerificationEventWithRetry/);
+  assert.match(page, /oralStartRequest/);
+  assert.match(page, /oralCompleteRequest/);
+  assert.match(page, /oralStartedId\.current === verificationId/);
+  assert.match(page, /oralCompletedId\.current === verificationId/);
+  assert.match(page, /cameraInterruptedId\.current !== verificationId/);
+  assert.match(page, /sendVerificationEventWithRetry\(verificationId, 'FOCUS_LOST', 2\)/);
+  assert.match(page, /Thử xác nhận lại/);
+  assert.doesNotMatch(page, /actualOralDurationSeconds|actual_oral_duration_seconds/);
 });
