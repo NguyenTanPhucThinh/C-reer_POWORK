@@ -15,10 +15,12 @@ function getEvidenceId(params: ReturnType<typeof useParams>) {
 export default function CandidateEvidenceDetailPage() {
   const evidenceId = getEvidenceId(useParams());
   const { user } = useAuth();
-  const { data: evidence, isLoading, isError, error } = useEvidenceDetail(
-    evidenceId,
-    user?.user_id ?? ''
-  );
+  const {
+    data: evidence,
+    isLoading,
+    isError,
+    error,
+  } = useEvidenceDetail(evidenceId, user?.user_id ?? '');
 
   if (isLoading) {
     return <LoadingSkeleton />;

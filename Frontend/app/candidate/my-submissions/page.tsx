@@ -17,8 +17,8 @@ export default function MySubmissionsPage() {
       <div className="card-base mt-8 text-center">
         <h2 className="text-xl font-semibold text-foreground">Lịch sử bài nộp chưa khả dụng</h2>
         <p className="mx-auto mt-2 max-w-xl text-sm text-foreground-secondary">
-          Backend hiện chưa cung cấp lịch sử bài nộp cho Candidate. Bạn vẫn có thể mở một thử
-          thách và nộp bài mới bình thường.
+          Backend hiện chưa cung cấp lịch sử bài nộp cho Candidate. Bạn vẫn có thể mở một thử thách
+          và nộp bài mới bình thường.
         </p>
         <Link href="/challenges" className="btn-base mt-5 inline-flex">
           Xem danh sách thử thách
