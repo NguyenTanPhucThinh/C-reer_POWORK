@@ -29,7 +29,7 @@ async function proxyRequest(request: NextRequest, context: RouteContext) {
       headers,
       body: hasBody ? await request.arrayBuffer() : undefined,
       cache: 'no-store',
-      signal: AbortSignal.timeout(10_000),
+      signal: AbortSignal.timeout(20_000),
     });
   } catch {
     return Response.json(
