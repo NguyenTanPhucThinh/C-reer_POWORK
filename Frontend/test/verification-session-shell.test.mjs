@@ -38,6 +38,21 @@ test('Candidate verification shell is resumable and derives its phase from Backe
   assert.match(page, /transitionLock\.current/);
   assert.doesNotMatch(page, /apiClient\.|user_id/);
 
+  const fullscreenRequest = page.indexOf('document.documentElement.requestFullscreen()');
+  const mediaCheck = page.indexOf('navigator.mediaDevices.getUserMedia');
+  const sessionStart = page.indexOf('assessmentAPI.startVerification');
+  assert.ok(fullscreenRequest > 0 && fullscreenRequest < mediaCheck);
+  assert.ok(mediaCheck < sessionStart);
+  assert.match(page, /mediaStream\?\.getTracks\(\)\.forEach\(\(track\) => track\.stop\(\)\)/);
+  assert.match(page, /addEventListener\('fullscreenchange'/);
+  assert.match(page, /addEventListener\('visibilitychange'/);
+  assert.match(page, /addEventListener\('blur'/);
+  assert.match(page, /addEventListener\('beforeunload'/);
+  assert.match(page, /now - lastFocusLossAt\.current < 750/);
+  assert.match(page, /sendVerificationEvent\(state\.session!\.verificationId, 'FOCUS_LOST'\)/);
+  assert.match(page, /Quay lại toàn màn hình/);
+  assert.doesNotMatch(page, /addEventListener\('keydown'/);
+
   assert.match(candidateLayout, /showNavigation=\{!isCandidateVerificationPath\(pathname\)\}/);
   assert.match(dashboardShell, /if \(!showNavigation\)/);
   assert.match(footer, /if \(isCandidateVerificationPath\(pathname\)\) return null/);
