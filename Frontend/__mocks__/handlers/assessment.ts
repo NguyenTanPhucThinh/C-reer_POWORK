@@ -20,7 +20,7 @@ const success = <T>(data: T, message?: string): ApiSuccess<T> => ({
 
 const MOCK_SUBMISSION: SubmissionReceipt = {
   submission_id: 'f5e921dd-14bb-421c-a32e-11bc9aef4421',
-  hash_id: 'Candidate_3941',
+  hash_id: 'Candidate_9F7A64D4297F45FA1E63B6A027AECE85',
   version: 1,
   status: 'Pending',
   submitted_at: new Date().toISOString(),
@@ -28,9 +28,7 @@ const MOCK_SUBMISSION: SubmissionReceipt = {
 
 export const assessmentHandlers = [
   http.post(`${BASE}/submissions`, () => {
-    const hashId = `Candidate_${Math.floor(Math.random() * 9999)
-      .toString()
-      .padStart(4, '0')}`;
+    const hashId = `Candidate_${crypto.randomUUID().replaceAll('-', '').toUpperCase()}`;
     const submission: SubmissionReceipt = {
       submission_id: `mock-${Date.now()}`,
       hash_id: hashId,

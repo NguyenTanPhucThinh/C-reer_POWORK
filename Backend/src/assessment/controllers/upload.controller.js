@@ -10,7 +10,6 @@ export const getPresignedUrl = async (req, res) => {
   const { filename } = req.query
 
   const result = await uploadService.generatePresignedUploadUrl({
-    userId: req.user.userId, // lấy từ JWT, không nhận từ FE
     challengeId,
     filename,
   })

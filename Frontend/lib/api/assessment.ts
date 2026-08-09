@@ -18,27 +18,12 @@ function cloneMockSubmission(submissionId: string): GradingSubmission {
   };
 }
 
-function getFileNameFromUrl(url: string, fallback: string): string {
-  try {
-    const parsedUrl = new URL(url);
-    const lastPathSegment = parsedUrl.pathname.split('/').filter(Boolean).pop();
-
-    if (lastPathSegment) {
-      return decodeURIComponent(lastPathSegment);
-    }
-
-    return parsedUrl.hostname || fallback;
-  } catch {
-    return fallback;
-  }
-}
-
 function getDocumentsFromSummary(summary: SubmissionVersion): ReviewDocument[] {
-  const fileName = getFileNameFromUrl(summary.solution_url, `${summary.submission_id}-submission`);
+  const extension = summary.solution_url.match(/\.[a-z0-9]{1,10}$/i)?.[0] ?? '';
 
   return [
     {
-      fileName,
+      fileName: `submission-v${summary.version}${extension}`,
       url: summary.solution_url,
       description:
         'Bài làm được backend trả về dưới dạng URL. Nếu trình duyệt không xem trước được, reviewer có thể tải xuống hoặc mở bằng công cụ phù hợp.',

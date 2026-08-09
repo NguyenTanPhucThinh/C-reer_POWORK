@@ -198,7 +198,7 @@ Tài liệu này quy định chi tiết các API Contracts thuộc phạm vi MVP
 
 #### [GET] `/api/v1/assessment/challenges/{challenge_id}/presigned-url`
 
-- **Mô tả:** Ứng viên xin cấp phép nộp bài. Backend tạo một URL tạm thời (Presigned URL) trỏ thẳng vào MinIO để Frontend tự tải file lên.
+- **Mô tả:** Ứng viên xin cấp phép nộp bài. Backend tạo một URL tạm thời (Presigned URL) trỏ thẳng vào MinIO để Frontend tự tải file lên. `object_key` dùng UUID ngẫu nhiên, không chứa `user_id` hoặc tên file gốc.
 - **Auth:** `Bearer <Candidate_Token>`
 - **Query Params:** `?filename=bai_lam.zip&content_type=application/zip`
 - **Response (200 OK):**
@@ -207,7 +207,7 @@ Tài liệu này quy định chi tiết các API Contracts thuộc phạm vi MVP
     "status": "success",
     "data": {
       "upload_url": "http://minio:9000/powork-submissions/...",
-      "object_key": "submissions/challenge_id/user_id/bai_lam.zip",
+      "object_key": "submissions/403bf47b-231a-4d22-9214-722a4669812a/8da218fa-64c1-4d61-920f-9fbb939263a3.zip",
       "expires_in": 300
     }
   }
@@ -221,7 +221,7 @@ Tài liệu này quy định chi tiết các API Contracts thuộc phạm vi MVP
   ```json
   {
     "challenge_id": "403bf47b-231a-4d22-9214-722a4669812a",
-    "solution_url": "submissions/challenge_id/user_id/bai_lam.zip"
+    "solution_url": "submissions/403bf47b-231a-4d22-9214-722a4669812a/8da218fa-64c1-4d61-920f-9fbb939263a3.zip"
   }
   ```
 - **Response (201 Created):** > **Lưu ý:** Tuyệt đối không có `user_id`. Chỉ trả về `hash_id` và `version`.
@@ -230,7 +230,7 @@ Tài liệu này quy định chi tiết các API Contracts thuộc phạm vi MVP
     "status": "success",
     "data": {
       "submission_id": "f5e921dd-14bb-421c-a32e-11bc9aef4421",
-      "hash_id": "Candidate_3941",
+      "hash_id": "Candidate_9F7A64D4297F45FA1E63B6A027AECE85",
       "version": 2,
       "status": "Pending",
       "submitted_at": "2026-06-10T02:15:00Z"
@@ -243,6 +243,7 @@ Tài liệu này quy định chi tiết các API Contracts thuộc phạm vi MVP
 - **Mô tả:** Doanh nghiệp lấy danh sách bài nộp để chấm. Trả về danh sách ứng viên, mỗi ứng viên chứa mảng các `versions` bài làm.
 - **Auth:** `Bearer <Employer_Token>`
 - **Ownership:** Chỉ công ty sở hữu Challenge mới được đọc danh sách. Công ty khác nhận `403 Forbidden` và không nhận dữ liệu Submission.
+- **Blind Audition:** Trước Unlock, truy vấn không đọc hoặc trả `user_id`, tên, email hay tên file gốc. Giao diện chỉ hiển thị tên trung tính như `submission-v2.zip`.
 - **Response (200 OK):**
   > **NGHIÊM CẤM:** Trả về data dính dáng đến profile ứng viên. Chỉ trả list chứa `hash_id` và link file.
   ```json
@@ -250,7 +251,7 @@ Tài liệu này quy định chi tiết các API Contracts thuộc phạm vi MVP
     "status": "success",
     "data": [
       {
-        "hash_id": "Candidate_3941",
+        "hash_id": "Candidate_9F7A64D4297F45FA1E63B6A027AECE85",
         "is_unlocked": false,
         "submissions": [
           {
