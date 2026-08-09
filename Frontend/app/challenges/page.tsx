@@ -1,11 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import _apiClient from '@/lib/api/client'; // Keep this import in case it's used elsewhere or for future real API calls
-import { challengeAPI } from '@/lib/api/endpoints'; // Keep this import in case it's used elsewhere or for future real API calls
-import { ChallengeSummary } from '@/lib/types/challenge';
+import { useChallenges } from '@/lib/hooks';
+import type { ChallengeSummary } from '@/lib/types/challenge';
 import { DashboardShell } from '@/components/layout/DashboardShell';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -15,7 +12,6 @@ interface ChallengeCardProps {
 }
 
 function ChallengeCard({ challenge }: ChallengeCardProps) {
-  const _router = useRouter();
   const isChallengeOpen = new Date(challenge.deadline) > new Date();
 
   return (
@@ -54,20 +50,7 @@ function ChallengeCard({ challenge }: ChallengeCardProps) {
 }
 
 export default function ChallengesPage() {
-  const [challenges, setChallenges] = useState<ChallengeSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function fetchChallenges() {
-      setLoading(true);
-      setError(null);
-      const res = await challengeAPI.list();
-      setChallenges(res);
-      setLoading(false);
-    }
-    fetchChallenges();
-  }, []);
+  const { data: challenges = [], isLoading, isError, error } = useChallenges();
 
   return (
     <DashboardShell>
@@ -77,9 +60,13 @@ export default function ChallengesPage() {
       <p className="text-lg text-gray-600 dark:text-gray-400 mb-6">
         Khám phá các thử thách hiện có
       </p>
-      {loading && <p className="text-center text-gray-500">Đang tải thử thách...</p>}
-      {error && <p className="text-center text-red-500">Lỗi: {error}</p>}
-      {!loading && challenges.length === 0 && !error && (
+      {isLoading && <p className="text-center text-gray-500">Đang tải thử thách...</p>}
+      {isError && (
+        <p className="text-center text-red-500">
+          Lỗi: {error?.message || 'Không thể tải danh sách thử thách.'}
+        </p>
+      )}
+      {!isLoading && challenges.length === 0 && !isError && (
         <p className="text-center text-gray-500">Không tìm thấy thử thách nào.</p>
       )}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
