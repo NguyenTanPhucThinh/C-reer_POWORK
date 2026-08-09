@@ -47,3 +47,6 @@ export const generatePresignedUploadUrl = async ({ challengeId, filename }) => {
     expiresIn: config.minio.presignedExpirySeconds,
   }
 }
+
+export const assertSubmissionObjectExists = (objectKey) =>
+  minioClient.statObject(config.minio.bucket, objectKey)

@@ -22,29 +22,34 @@ export const scanObjectForVirus = async (objectKey) => {
 }
 
 // Quét 1 Submission cụ thể và cập nhật trạng thái tương ứng
-export const scanSubmission = async (submissionId) => {
-  const submission = await submissionRepository.findSubmissionById(submissionId)
+export const scanSubmission = async (
+  submissionId,
+  { repository = submissionRepository, scan = scanObjectForVirus } = {},
+) => {
+  const submission = await repository.findSubmissionById(submissionId)
   if (!submission) {
     console.warn(`[ClamAV Job] Submission ${submissionId} không tồn tại, bỏ qua`)
     return
   }
+  if (submission.fileStatus !== 'PENDING_SCAN') return submission
 
   try {
-    const { isInfected, viruses } = await scanObjectForVirus(submission.solutionUrl)
+    const { isInfected, viruses } = await scan(submission.solutionUrl)
 
-    if (isInfected) {
+    if (isInfected === true) {
       // File dính mã độc — từ chối ngầm, KHÔNG cho Employer thấy nội dung
-      await submissionRepository.updateSubmissionStatus(
-        submissionId,
-        'REJECTED',
-        `[Hệ thống] File bị từ chối do phát hiện mã độc: ${viruses?.join(', ') || 'unknown'}`,
-      )
-      console.warn(`🦠 [ClamAV Job] Submission ${submissionId} NHIỄM VIRUS — đã reject`)
-    } else {
-      console.log(`✅ [ClamAV Job] Submission ${submissionId} an toàn`)
+      return repository.updateSubmissionScanResult(submissionId, {
+        fileStatus: 'REJECTED',
+        status: 'REJECTED',
+        generalComment: `[Hệ thống] File bị từ chối do phát hiện mã độc: ${viruses?.join(', ') || 'unknown'}`,
+      })
     }
+
+    if (isInfected !== false) throw new Error('ClamAV returned an indeterminate result')
+
+    return repository.updateSubmissionScanResult(submissionId, { fileStatus: 'SAFE' })
   } catch (err) {
-    // Lỗi quét (ClamAV down, file lỗi...) — KHÔNG tự ý reject, chỉ log để dev xử lý
     console.error(`[ClamAV Job] Lỗi khi quét submission ${submissionId}:`, err.message)
+    return repository.updateSubmissionScanResult(submissionId, { fileStatus: 'SCAN_FAILED' })
   }
 }

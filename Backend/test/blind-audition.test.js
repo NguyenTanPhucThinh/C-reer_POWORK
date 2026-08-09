@@ -51,6 +51,7 @@ test('identity upsert and Employer projection enforce the blind boundary', async
       findMany: async ({ select }) => {
         assert.equal(select.userId, undefined)
         assert.equal(select.hashId, true)
+        assert.deepEqual(select.submissions.where, { fileStatus: 'SAFE' })
         return [
           {
             hashId: generateHashId(userId, challengeId),

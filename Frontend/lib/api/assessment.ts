@@ -34,10 +34,11 @@ function getDocumentsFromSummary(summary: SubmissionVersion): ReviewDocument[] {
 export async function getGradingSubmission({
   submissionId,
   challengeId,
-  allowMockFallback = true,
+  allowMockFallback = false,
 }: GetGradingSubmissionOptions): Promise<GradingSubmission> {
   if (!challengeId) {
-    return cloneMockSubmission(submissionId);
+    if (allowMockFallback) return cloneMockSubmission(submissionId);
+    throw new Error('Challenge ID is required to load a grading submission.');
   }
 
   try {

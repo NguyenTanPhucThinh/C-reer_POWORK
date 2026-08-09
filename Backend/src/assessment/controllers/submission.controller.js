@@ -8,6 +8,14 @@ import * as evaluationService from '../services/evaluation.service.js'
 import * as companyService from '../../iam/services/company.service.js'
 import prisma from '../../shared/config/prisma.js'
 
+const fileStatusToApi = {
+  AWAITING_UPLOAD: 'AwaitingUpload',
+  PENDING_SCAN: 'PendingScan',
+  SAFE: 'Safe',
+  REJECTED: 'Rejected',
+  SCAN_FAILED: 'ScanFailed',
+}
+
 // POST /api/v1/assessment/submissions
 export const submitSolution = async (req, res) => {
   const { challenge_id: challengeId, solution_url: solutionUrl } = req.body
@@ -28,6 +36,7 @@ export const submitSolution = async (req, res) => {
     hash_id: result.hashId,
     version: result.version,
     status: `${result.status[0]}${result.status.slice(1).toLowerCase()}`,
+    file_status: fileStatusToApi[result.fileStatus],
     submitted_at: result.submittedAt,
   })
 }
@@ -46,6 +55,7 @@ export const getSubmissionsByChallenge = async (req, res) => {
         submission_id: submission.submissionId,
         version: submission.version,
         status: `${submission.status[0]}${submission.status.slice(1).toLowerCase()}`,
+        file_status: fileStatusToApi[submission.fileStatus],
         solution_url: submission.solutionUrl,
         submitted_at: submission.submittedAt,
       })),

@@ -1,6 +1,6 @@
 import { AppError } from '../../shared/utils/AppError.js'
 import prisma from '../../shared/config/prisma.js'
-import { assertChallengeOwnership } from './ownership.service.js'
+import { assertChallengeOwnership, assertSubmissionFileSafe } from './ownership.service.js'
 
 export const evaluateSubmission = async (
   submissionId,
@@ -18,6 +18,7 @@ export const evaluateSubmission = async (
 
     const challenge = await tx.challenge.findUnique({ where: { id: submission.challengeId } })
     assertChallengeOwnership(challenge, companyId)
+    assertSubmissionFileSafe(submission)
 
     if (!submission.identityMapping) {
       throw new AppError('Không tìm thấy identity mapping', 404, 'ASSESS_003')

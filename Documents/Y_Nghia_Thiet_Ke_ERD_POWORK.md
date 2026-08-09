@@ -47,6 +47,7 @@ Quản lý toàn bộ kho dữ liệu tĩnh liên quan đến đề bài do nhà
   - Khóa chính (PK) là `submission_id`. Bảng này **tuyệt đối không có cột `user_id`**. Danh tính ứng viên được nối với bảng kín thông qua chuỗi mã hóa `hash_id`.
   - Nhà tuyển dụng chỉ được phép tương tác với bảng này khi chấm điểm.
   - `solution_url` lưu trữ đường dẫn chứa mã nguồn, file thiết kế hoặc tài liệu giải pháp của ứng viên trên Cloud Storage.
+  - `file_status` tách riêng vòng đời an toàn: `AWAITING_UPLOAD`, `PENDING_SCAN`, `SAFE`, `REJECTED`, `SCAN_FAILED`. Chỉ file `SAFE` được đưa vào luồng Employer; lỗi scan luôn fail-closed.
   - Lưu trữ thêm trường `general_comment` để chứa nhận xét tổng quan của giám khảo lúc duyệt bài.
 - **Bảng `Evaluation_Results`:**
   - Lưu trữ điểm số chi tiết do giám khảo chấm dựa trên từng dòng tiêu chí (`criteria_id`).
