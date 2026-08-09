@@ -12,6 +12,7 @@ export const errorHandler = (err, req, res, next) => {
       status: 'error',
       error_code: err.errorCode ?? 'UNKNOWN',
       message: err.message,
+      ...(err.details && { details: err.details }),
       ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
     })
   }

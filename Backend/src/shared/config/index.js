@@ -49,5 +49,10 @@ export const config = {
     callbackUrl:
       process.env.GOOGLE_CALLBACK_URL || 'http://localhost:3001/api/v1/auth/google/callback',
   },
+  gemini: {
+    apiKey: process.env.GEMINI_API_KEY || '',
+    model: process.env.GEMINI_MODEL || 'gemini-3.6-flash',
+    timeoutMs: parseInteger(process.env.GEMINI_TIMEOUT_MS, 15000),
+  },
   clientUrl: process.env.CLIENT_URL || 'http://localhost:3000',
 }
