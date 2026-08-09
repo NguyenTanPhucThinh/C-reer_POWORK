@@ -7,7 +7,11 @@ import {
   unlockCandidate,
 } from '../controllers/submission.controller.js'
 import { getPresignedUrl } from '../controllers/upload.controller.js'
-import { resumeVerification, startVerification } from '../controllers/verification.controller.js'
+import {
+  createVerificationQuestions,
+  resumeVerification,
+  startVerification,
+} from '../controllers/verification.controller.js'
 import {
   authenticate,
   authorize,
@@ -56,6 +60,13 @@ router.get(
   authenticate,
   authorize('CANDIDATE'),
   resumeVerification,
+)
+
+router.post(
+  '/verifications/:verification_id/questions',
+  authenticate,
+  authorize('CANDIDATE'),
+  createVerificationQuestions,
 )
 
 // Employer xem danh sách bài nộp — group theo hash_id, nhiều version

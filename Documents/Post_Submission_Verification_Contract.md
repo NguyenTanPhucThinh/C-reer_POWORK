@@ -511,20 +511,21 @@ Response `200 OK`:
 
 ## 12. Error contract
 
-| HTTP  | `error_code`                        | Khi sử dụng                                                                 |
-| ----- | ----------------------------------- | --------------------------------------------------------------------------- |
-| `400` | `VERIFICATION_VALIDATION`           | Payload, duration, answer, MIME type hoặc event không hợp lệ                |
-| `403` | `VERIFICATION_FORBIDDEN`            | Không sở hữu Submission/Verification hoặc Employer không thuộc đúng công ty |
-| `403` | `VERIFICATION_LOCKED`               | Employer yêu cầu bằng chứng chi tiết trước khi unlock                       |
-| `404` | `VERIFICATION_NOT_FOUND`            | Không tìm thấy Submission hoặc Verification trong phạm vi được phép biết    |
-| `409` | `VERIFICATION_DURATION_LOCKED`      | Cố đổi thời lượng sau khi phiên đã được tạo                                 |
-| `409` | `VERIFICATION_INVALID_STATE`        | Hành động không hợp lệ với trạng thái hiện tại                              |
-| `409` | `VERIFICATION_ALREADY_COMPLETED`    | Cố thay đổi một phiên đã ở trạng thái cuối                                  |
-| `410` | `VERIFICATION_EXPIRED`              | Phiên đã hết hạn                                                            |
-| `413` | `VERIFICATION_RECORDING_TOO_LARGE`  | Video vượt quá 100 MiB                                                      |
-| `415` | `VERIFICATION_RECORDING_TYPE`       | MIME type video không được hỗ trợ                                           |
-| `503` | `VERIFICATION_QUESTION_UNAVAILABLE` | AI timeout, không phản hồi hoặc trả dữ liệu không hợp lệ                    |
-| `503` | `VERIFICATION_SCAN_UNAVAILABLE`     | Không thể xác định video có an toàn hay không                               |
+| HTTP  | `error_code`                             | Khi sử dụng                                                                 |
+| ----- | ---------------------------------------- | --------------------------------------------------------------------------- |
+| `400` | `VERIFICATION_VALIDATION`                | Payload, duration, answer, MIME type hoặc event không hợp lệ                |
+| `403` | `VERIFICATION_FORBIDDEN`                 | Không sở hữu Submission/Verification hoặc Employer không thuộc đúng công ty |
+| `403` | `VERIFICATION_LOCKED`                    | Employer yêu cầu bằng chứng chi tiết trước khi unlock                       |
+| `404` | `VERIFICATION_NOT_FOUND`                 | Không tìm thấy Submission hoặc Verification trong phạm vi được phép biết    |
+| `409` | `VERIFICATION_DURATION_LOCKED`           | Cố đổi thời lượng sau khi phiên đã được tạo                                 |
+| `409` | `VERIFICATION_INVALID_STATE`             | Hành động không hợp lệ với trạng thái hiện tại                              |
+| `409` | `VERIFICATION_ALREADY_COMPLETED`         | Cố thay đổi một phiên đã ở trạng thái cuối                                  |
+| `410` | `VERIFICATION_EXPIRED`                   | Phiên đã hết hạn                                                            |
+| `413` | `VERIFICATION_RECORDING_TOO_LARGE`       | Video vượt quá 100 MiB                                                      |
+| `415` | `VERIFICATION_RECORDING_TYPE`            | MIME type video không được hỗ trợ                                           |
+| `502` | `VERIFICATION_QUESTION_INVALID_RESPONSE` | AI phản hồi nhưng bộ câu hỏi sai cấu trúc hoặc vi phạm contract             |
+| `503` | `VERIFICATION_QUESTION_UNAVAILABLE`      | AI timeout, không phản hồi hoặc dịch vụ không khả dụng                      |
+| `503` | `VERIFICATION_SCAN_UNAVAILABLE`          | Không thể xác định video có an toàn hay không                               |
 
 Response lỗi dùng envelope hiện tại:
 
@@ -662,33 +663,34 @@ Không thêm biểu đồ, thư viện chart, fraud score hoặc xếp hạng Ca
 
 ## 16. Tình huống nghiệm thu
 
-| Mã        | Tình huống                                   | Kết quả mong đợi                                                |
-| --------- | -------------------------------------------- | --------------------------------------------------------------- |
-| `VER-001` | Candidate tạo phiên cho Submission của mình  | Trả một Verification hợp lệ                                     |
-| `VER-002` | Candidate đổi sang Submission của người khác | `403`, không tạo dữ liệu phụ                                    |
-| `VER-003` | Chọn 15, 30, 60 hoặc 120 giây                | Được chấp nhận                                                  |
-| `VER-004` | Chọn thời lượng ngoài danh sách              | `400 VERIFICATION_VALIDATION`                                   |
-| `VER-005` | Gọi start lặp với cùng thời lượng            | Trả cùng Verification                                           |
-| `VER-006` | Gọi start lặp với thời lượng khác            | `409 VERIFICATION_DURATION_LOCKED`                              |
-| `VER-007` | AI trả 1–3 câu hợp lệ                        | Lưu đúng một bộ câu hỏi và chuyển `Answering`                   |
-| `VER-008` | AI timeout hoặc output sai                   | `503`, không lưu câu hỏi lỗi                                    |
-| `VER-009` | Gọi tạo câu hỏi lặp hoặc đồng thời           | Không tạo bộ câu hỏi thứ hai                                    |
-| `VER-010` | Candidate gửi thiếu hoặc sai question ID     | `400`, không lưu câu trả lời                                    |
-| `VER-011` | Candidate dùng object key khác               | Bị chặn, không đổi trạng thái                                   |
-| `VER-012` | Candidate hoàn tất đúng dữ liệu              | `202`, chuyển `PendingScan`                                     |
-| `VER-013` | ClamAV xác nhận sạch                         | Chuyển `Ready`                                                  |
-| `VER-014` | ClamAV phát hiện không an toàn               | Chuyển `Rejected`                                               |
-| `VER-015` | ClamAV lỗi hoặc không xác định               | Chuyển `ScanFailed`, không coi là thành công                    |
-| `VER-016` | Phiên hết 15 phút                            | Chuyển `Expired`, không nhận hoàn tất mới                       |
-| `VER-017` | Camera bị gián đoạn                          | Khóa trả lời, ghi nhận tín hiệu và cho khôi phục trong thời hạn |
-| `VER-018` | Candidate paste hoặc nhấn `Ctrl/Cmd+A`       | Frontend chặn và ghi nhận event                                 |
-| `VER-019` | Employer chưa unlock lấy dashboard/video     | `403 VERIFICATION_LOCKED`                                       |
-| `VER-020` | Employer công ty khác đổi Submission ID      | `403`, không lộ dữ liệu                                         |
-| `VER-021` | Employer đúng công ty đã unlock              | Nhận dashboard và URL video tạm thời                            |
-| `VER-022` | Employer xem summary trước unlock            | Chỉ nhận metadata trung tính                                    |
-| `VER-023` | Request hoàn tất lặp hoặc đồng thời          | Không tạo câu trả lời hoặc scan job trùng                       |
-| `VER-024` | Upload hoặc transaction thất bại             | Không để phiên ở trạng thái hoàn thành một phần                 |
-| `VER-025` | Verification đạt `Ready`                     | Hiển thị thông báo hoàn tất và lời cảm ơn                       |
+| Mã         | Tình huống                                   | Kết quả mong đợi                                                |
+| ---------- | -------------------------------------------- | --------------------------------------------------------------- |
+| `VER-001`  | Candidate tạo phiên cho Submission của mình  | Trả một Verification hợp lệ                                     |
+| `VER-002`  | Candidate đổi sang Submission của người khác | `403`, không tạo dữ liệu phụ                                    |
+| `VER-003`  | Chọn 15, 30, 60 hoặc 120 giây                | Được chấp nhận                                                  |
+| `VER-004`  | Chọn thời lượng ngoài danh sách              | `400 VERIFICATION_VALIDATION`                                   |
+| `VER-005`  | Gọi start lặp với cùng thời lượng            | Trả cùng Verification                                           |
+| `VER-006`  | Gọi start lặp với thời lượng khác            | `409 VERIFICATION_DURATION_LOCKED`                              |
+| `VER-007`  | AI trả 1–3 câu hợp lệ                        | Lưu đúng một bộ câu hỏi và chuyển `Answering`                   |
+| `VER-008`  | AI timeout hoặc không khả dụng               | `503`, không lưu câu hỏi lỗi                                    |
+| `VER-008A` | AI trả output sai cấu trúc                   | `502`, không lưu câu hỏi lỗi                                    |
+| `VER-009`  | Gọi tạo câu hỏi lặp hoặc đồng thời           | Không tạo bộ câu hỏi thứ hai                                    |
+| `VER-010`  | Candidate gửi thiếu hoặc sai question ID     | `400`, không lưu câu trả lời                                    |
+| `VER-011`  | Candidate dùng object key khác               | Bị chặn, không đổi trạng thái                                   |
+| `VER-012`  | Candidate hoàn tất đúng dữ liệu              | `202`, chuyển `PendingScan`                                     |
+| `VER-013`  | ClamAV xác nhận sạch                         | Chuyển `Ready`                                                  |
+| `VER-014`  | ClamAV phát hiện không an toàn               | Chuyển `Rejected`                                               |
+| `VER-015`  | ClamAV lỗi hoặc không xác định               | Chuyển `ScanFailed`, không coi là thành công                    |
+| `VER-016`  | Phiên hết 15 phút                            | Chuyển `Expired`, không nhận hoàn tất mới                       |
+| `VER-017`  | Camera bị gián đoạn                          | Khóa trả lời, ghi nhận tín hiệu và cho khôi phục trong thời hạn |
+| `VER-018`  | Candidate paste hoặc nhấn `Ctrl/Cmd+A`       | Frontend chặn và ghi nhận event                                 |
+| `VER-019`  | Employer chưa unlock lấy dashboard/video     | `403 VERIFICATION_LOCKED`                                       |
+| `VER-020`  | Employer công ty khác đổi Submission ID      | `403`, không lộ dữ liệu                                         |
+| `VER-021`  | Employer đúng công ty đã unlock              | Nhận dashboard và URL video tạm thời                            |
+| `VER-022`  | Employer xem summary trước unlock            | Chỉ nhận metadata trung tính                                    |
+| `VER-023`  | Request hoàn tất lặp hoặc đồng thời          | Không tạo câu trả lời hoặc scan job trùng                       |
+| `VER-024`  | Upload hoặc transaction thất bại             | Không để phiên ở trạng thái hoàn thành một phần                 |
+| `VER-025`  | Verification đạt `Ready`                     | Hiển thị thông báo hoàn tất và lời cảm ơn                       |
 
 ---
 
