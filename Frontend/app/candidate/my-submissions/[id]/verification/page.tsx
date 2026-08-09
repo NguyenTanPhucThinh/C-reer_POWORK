@@ -13,6 +13,7 @@ import {
 } from '@/lib/hooks/useVerificationRecorder';
 import type {
   ApiErrorBody,
+  CompleteVerificationInput,
   OralDurationSeconds,
   VerificationEvent,
   VerificationQuestion,
@@ -48,6 +49,10 @@ interface VerificationState {
   answers: Record<string, string>;
   questionError: string | null;
   notice: string | null;
+  recordingObjectKey: string | null;
+  uploadProgress: number;
+  evidenceUploaded: boolean;
+  uploadError: string | null;
 }
 
 type VerificationAction =
@@ -70,6 +75,14 @@ type VerificationAction =
   | { type: 'ANSWER_CHANGED'; questionId: string; answer: string }
   | { type: 'SHOW_NOTICE'; message: string }
   | { type: 'CLEAR_NOTICE' }
+  | { type: 'EVIDENCE_SUBMITTING' }
+  | { type: 'UPLOAD_TARGET_RECEIVED'; objectKey: string }
+  | { type: 'UPLOAD_PROGRESS'; progress: number }
+  | { type: 'UPLOAD_SUCCEEDED' }
+  | { type: 'COMPLETE_STARTED' }
+  | { type: 'EVIDENCE_FAILED'; message: string }
+  | { type: 'SCAN_STARTED'; session: VerificationSession }
+  | { type: 'SCAN_POLL_ERROR'; message: string }
   | {
       type: 'FAIL';
       error: VerificationState['error'];
@@ -129,6 +142,10 @@ const initialState: VerificationState = {
   answers: {},
   questionError: null,
   notice: null,
+  recordingObjectKey: null,
+  uploadProgress: 0,
+  evidenceUploaded: false,
+  uploadError: null,
 };
 
 function verificationReducer(
@@ -148,6 +165,10 @@ function verificationReducer(
         questions: [],
         answers: {},
         questionError: null,
+        recordingObjectKey: null,
+        uploadProgress: 0,
+        evidenceUploaded: false,
+        uploadError: null,
       };
     case 'SELECT_DURATION':
       return { ...state, oralDurationSeconds: action.duration };
@@ -203,6 +224,30 @@ function verificationReducer(
       return { ...state, notice: action.message };
     case 'CLEAR_NOTICE':
       return { ...state, notice: null };
+    case 'EVIDENCE_SUBMITTING':
+      return { ...state, phase: 'PREPARING_UPLOAD', uploadError: null };
+    case 'UPLOAD_TARGET_RECEIVED':
+      return {
+        ...state,
+        recordingObjectKey: action.objectKey,
+      };
+    case 'UPLOAD_PROGRESS':
+      return { ...state, phase: 'UPLOADING', uploadProgress: action.progress };
+    case 'UPLOAD_SUCCEEDED':
+      return { ...state, phase: 'COMPLETING', uploadProgress: 100, evidenceUploaded: true };
+    case 'COMPLETE_STARTED':
+      return { ...state, phase: 'COMPLETING', uploadError: null };
+    case 'EVIDENCE_FAILED':
+      return { ...state, phase: 'PREPARING_UPLOAD', uploadError: action.message };
+    case 'SCAN_STARTED':
+      return {
+        ...state,
+        phase: 'SCANNING',
+        session: action.session,
+        uploadError: null,
+      };
+    case 'SCAN_POLL_ERROR':
+      return { ...state, uploadError: action.message };
     case 'FAIL':
       return {
         ...state,
@@ -324,6 +369,35 @@ async function sendVerificationEventWithRetry(
   }
 }
 
+function uploadRecordingBlob(
+  uploadUrl: string,
+  blob: Blob,
+  onProgress: (progress: number) => void
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open('PUT', uploadUrl);
+    request.setRequestHeader('Content-Type', 'video/webm');
+    request.upload.onprogress = (event) => {
+      if (event.lengthComputable) onProgress(Math.round((event.loaded / event.total) * 100));
+    };
+    request.onload = () => {
+      if (request.status >= 200 && request.status < 300) resolve();
+      else reject(new Error(`MinIO từ chối upload với HTTP ${request.status}.`));
+    };
+    request.onerror = () => reject(new Error('Mất kết nối trong khi tải video lên MinIO.'));
+    request.onabort = () => reject(new Error('Quá trình tải video đã bị gián đoạn.'));
+    request.send(blob);
+  });
+}
+
+function isAlreadyCompletedError(error: unknown): boolean {
+  return (
+    axios.isAxiosError<ApiErrorBody>(error) &&
+    error.response?.data?.error_code === 'VERIFICATION_ALREADY_COMPLETED'
+  );
+}
+
 export default function CandidateVerificationPage() {
   const submissionId = getSubmissionId(useParams());
   const [state, dispatch] = useReducer(verificationReducer, initialState);
@@ -339,6 +413,8 @@ export default function CandidateVerificationPage() {
   const questionsLoadedId = useRef<string | null>(null);
   const questionRequest = useRef<{ id: string; promise: Promise<void> } | null>(null);
   const lastBlockedAction = useRef<{ event: VerificationEvent; at: number } | null>(null);
+  const evidenceSubmissionLock = useRef(false);
+  const completeRequest = useRef<{ id: string; promise: Promise<void> } | null>(null);
 
   const fail = useCallback((error: unknown, retryAction: Exclude<RetryAction, null>) => {
     const detail = describeError(error);
@@ -440,6 +516,22 @@ export default function CandidateVerificationPage() {
     questionRequest.current = { id: verificationId, promise: request };
     return request;
   }, []);
+
+  const completeEvidenceOnce = useCallback(
+    (verificationId: string, payload: CompleteVerificationInput) => {
+      if (completeRequest.current?.id === verificationId) return completeRequest.current.promise;
+
+      const request: Promise<void> = assessmentAPI
+        .completeVerification(verificationId, payload)
+        .then(() => undefined)
+        .finally(() => {
+          if (completeRequest.current?.promise === request) completeRequest.current = null;
+        });
+      completeRequest.current = { id: verificationId, promise: request };
+      return request;
+    },
+    []
+  );
 
   const reportBlockedAction = useCallback(
     (
@@ -579,6 +671,9 @@ export default function CandidateVerificationPage() {
 
   const hasSession = state.session !== null;
   const isSessionInProgress = hasSession && state.phase !== 'COMPLETED' && state.phase !== 'FAILED';
+  const isEvidenceSubmitting = ['PREPARING_UPLOAD', 'UPLOADING', 'COMPLETING', 'SCANNING'].includes(
+    state.phase
+  );
   const badgeVariant =
     state.phase === 'COMPLETED' ? 'done' : state.phase === 'FAILED' ? 'fail' : 'blind';
 
@@ -644,6 +739,87 @@ export default function CandidateVerificationPage() {
     transitionLock.current = false;
   }
 
+  async function submitVerificationEvidence() {
+    if (evidenceSubmissionLock.current || !state.session) return;
+    evidenceSubmissionLock.current = true;
+    dispatch({ type: 'EVIDENCE_SUBMITTING' });
+
+    const answers = state.questions.map((question) => ({
+      questionId: question.questionId,
+      answer: state.answers[question.questionId] ?? '',
+    }));
+    const invalidAnswer = state.questions.some((question) => {
+      const length = (state.answers[question.questionId] ?? '').length;
+      return length < question.minimumLength || length > question.maximumLength;
+    });
+    const blob = recorder.recordingBlob;
+
+    try {
+      if (state.questions.length === 0 || invalidAnswer) {
+        throw new Error('Vui lòng hoàn thành tất cả câu trả lời đúng giới hạn ký tự.');
+      }
+      recorder.releaseMedia();
+      if (!blob || blob.size === 0) {
+        throw new Error('Không tìm thấy video ghi hình hợp lệ để tải lên.');
+      }
+      if (blob.type !== 'video/webm') {
+        throw new Error('Video ghi hình không đúng định dạng WebM.');
+      }
+      if (blob.size > VERIFICATION_MAX_FILE_BYTES) {
+        throw new Error('Video vượt quá giới hạn dung lượng cho phép.');
+      }
+
+      let objectKey = state.recordingObjectKey;
+      if (!state.evidenceUploaded) {
+        const upload = await assessmentAPI.requestVerificationRecordingUpload(
+          state.session.verificationId
+        );
+        if (objectKey && upload.objectKey !== objectKey) {
+          throw new Error('Backend trả về object key khác với phiên upload hiện tại.');
+        }
+        objectKey = upload.objectKey;
+        dispatch({
+          type: 'UPLOAD_TARGET_RECEIVED',
+          objectKey,
+        });
+        await uploadRecordingBlob(upload.uploadUrl, blob, (progress) =>
+          dispatch({ type: 'UPLOAD_PROGRESS', progress })
+        );
+        dispatch({ type: 'UPLOAD_SUCCEEDED' });
+      }
+
+      if (!objectKey) throw new Error('Không tìm thấy object key của video xác thực.');
+      dispatch({ type: 'COMPLETE_STARTED' });
+      try {
+        await completeEvidenceOnce(state.session.verificationId, {
+          objectKey,
+          recordingMimeType: 'video/webm',
+          answers,
+        });
+      } catch (error) {
+        if (!isAlreadyCompletedError(error)) throw error;
+      }
+
+      const currentSession = await assessmentAPI.getVerificationStatus(
+        state.session.verificationId
+      );
+      if (currentSession.status === 'PendingScan') {
+        dispatch({ type: 'SCAN_STARTED', session: currentSession });
+      } else {
+        dispatch({ type: 'SYNC_SESSION', session: currentSession });
+      }
+    } catch (error) {
+      const message = axios.isAxiosError(error)
+        ? describeError(error).message
+        : error instanceof Error
+          ? error.message
+          : 'Không thể hoàn tất xác thực. Vui lòng thử lại.';
+      dispatch({ type: 'EVIDENCE_FAILED', message });
+    } finally {
+      evidenceSubmissionLock.current = false;
+    }
+  }
+
   useEffect(() => {
     if (!isSessionInProgress) return;
 
@@ -653,6 +829,38 @@ export default function CandidateVerificationPage() {
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, [isSessionInProgress]);
+
+  useEffect(() => {
+    if (state.phase !== 'SCANNING' || !state.session) return;
+    const verificationId = state.session.verificationId;
+    let cancelled = false;
+    let timer: number | null = null;
+
+    const poll = async () => {
+      try {
+        const session = await assessmentAPI.getVerificationStatus(verificationId);
+        if (cancelled) return;
+        if (session.status === 'PendingScan') {
+          timer = window.setTimeout(poll, 1500);
+        } else {
+          dispatch({ type: 'SYNC_SESSION', session });
+        }
+      } catch {
+        if (cancelled) return;
+        dispatch({
+          type: 'SCAN_POLL_ERROR',
+          message: 'Tạm thời chưa đọc được trạng thái quét. Hệ thống sẽ tự thử lại.',
+        });
+        timer = window.setTimeout(poll, 2000);
+      }
+    };
+
+    timer = window.setTimeout(poll, 1000);
+    return () => {
+      cancelled = true;
+      if (timer !== null) window.clearTimeout(timer);
+    };
+  }, [state.phase, state.session]);
 
   useEffect(() => {
     if (!state.notice) return;
@@ -861,14 +1069,34 @@ export default function CandidateVerificationPage() {
                 dispatch({ type: 'ANSWER_CHANGED', questionId, answer })
               }
               onBlocked={reportBlockedAction}
+              isSubmitting={isEvidenceSubmitting}
+              onComplete={() => void submitVerificationEvidence()}
             />
           )}
+
+          {state.session &&
+            (state.phase === 'PREPARING_UPLOAD' ||
+              state.phase === 'UPLOADING' ||
+              state.phase === 'COMPLETING' ||
+              state.phase === 'SCANNING') && (
+              <EvidenceUploadPanel
+                phase={state.phase}
+                progress={state.uploadProgress}
+                error={state.uploadError}
+                uploaded={state.evidenceUploaded}
+                onRetry={() => void submitVerificationEvidence()}
+              />
+            )}
 
           {state.phase !== 'PREPARING' &&
             state.phase !== 'STARTING' &&
             state.phase !== 'ORAL_ACTIVE' &&
             state.phase !== 'GENERATING_QUESTIONS' &&
             state.phase !== 'ANSWERING' &&
+            state.phase !== 'PREPARING_UPLOAD' &&
+            state.phase !== 'UPLOADING' &&
+            state.phase !== 'COMPLETING' &&
+            state.phase !== 'SCANNING' &&
             state.phase !== 'FAILED' &&
             state.phase !== 'COMPLETED' &&
             state.session && (
@@ -957,12 +1185,21 @@ function EssayAnsweringPanel({
   answers,
   onAnswerChange,
   onBlocked,
+  isSubmitting,
+  onComplete,
 }: {
   questions: VerificationQuestion[];
   answers: Record<string, string>;
   onAnswerChange: (questionId: string, answer: string) => void;
   onBlocked: (event: BlockedTypingEvent) => void;
+  isSubmitting: boolean;
+  onComplete: () => void;
 }) {
+  const allAnswersValid = questions.every((question) => {
+    const length = (answers[question.questionId] ?? '').length;
+    return length >= question.minimumLength && length <= question.maximumLength;
+  });
+
   return (
     <section className="rounded-xl border-hairline border-border bg-background-secondary p-5 sm:p-8">
       <p className="text-xs font-semibold uppercase tracking-wider text-accent">Câu hỏi tự luận</p>
@@ -1041,6 +1278,100 @@ function EssayAnsweringPanel({
           );
         })}
       </div>
+
+      <div className="mt-7 flex flex-col gap-3 border-t-hairline border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm text-foreground-secondary">
+          {allAnswersValid
+            ? 'Tất cả câu trả lời đã đủ điều kiện để hoàn tất.'
+            : 'Hãy hoàn thành đầy đủ các câu trả lời trước khi tiếp tục.'}
+        </p>
+        <Button
+          type="button"
+          variant="primary"
+          size="lg"
+          disabled={!allAnswersValid || isSubmitting}
+          onClick={onComplete}
+        >
+          {isSubmitting ? 'Đang hoàn tất...' : 'Hoàn tất xác thực'}
+        </Button>
+      </div>
+    </section>
+  );
+}
+
+function EvidenceUploadPanel({
+  phase,
+  progress,
+  error,
+  uploaded,
+  onRetry,
+}: {
+  phase: VerificationPhase;
+  progress: number;
+  error: string | null;
+  uploaded: boolean;
+  onRetry: () => void;
+}) {
+  const title =
+    phase === 'UPLOADING'
+      ? 'Đang tải video xác thực'
+      : phase === 'COMPLETING'
+        ? 'Đang xác nhận bài làm'
+        : phase === 'SCANNING'
+          ? 'Đang quét an toàn video'
+          : uploaded
+            ? 'Chưa thể hoàn tất xác thực'
+            : 'Đang chuẩn bị upload';
+
+  return (
+    <section
+      className="rounded-xl border-hairline border-border bg-background-secondary p-6 sm:p-8"
+      aria-live="polite"
+    >
+      <p className="text-xs font-semibold uppercase tracking-wider text-accent">Hoàn tất phiên</p>
+      <h2 className="mt-2 text-2xl font-semibold">{title}</h2>
+      <p className="mt-2 text-sm leading-6 text-foreground-secondary">
+        {phase === 'SCANNING'
+          ? 'Backend đã nhận video và câu trả lời. Vui lòng chờ kết quả kiểm tra an toàn.'
+          : 'Video và câu trả lời vẫn được giữ trong tab này cho tới khi Backend xác nhận.'}
+      </p>
+
+      {(phase === 'UPLOADING' || progress > 0) && (
+        <div className="mt-6">
+          <div className="mb-2 flex justify-between text-xs text-foreground-tertiary">
+            <span>Upload video WebM</span>
+            <span>{progress}%</span>
+          </div>
+          <div
+            className="h-2 overflow-hidden rounded-full bg-background-tertiary"
+            role="progressbar"
+            aria-label="Tiến độ upload video"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={progress}
+          >
+            <div
+              className="h-full bg-accent transition-[width]"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div
+          className="mt-5 rounded-lg border border-warning bg-warning-bg p-4 text-sm text-warning"
+          role="alert"
+        >
+          {error}
+        </div>
+      )}
+
+      {phase === 'PREPARING_UPLOAD' && error && (
+        <Button type="button" variant="primary" className="mt-5" onClick={onRetry}>
+          {uploaded ? 'Thử hoàn tất lại' : 'Thử upload lại'}
+        </Button>
+      )}
     </section>
   );
 }
