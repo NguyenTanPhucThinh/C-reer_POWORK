@@ -242,6 +242,7 @@ Tài liệu này quy định chi tiết các API Contracts thuộc phạm vi MVP
 
 - **Mô tả:** Doanh nghiệp lấy danh sách bài nộp để chấm. Trả về danh sách ứng viên, mỗi ứng viên chứa mảng các `versions` bài làm.
 - **Auth:** `Bearer <Employer_Token>`
+- **Ownership:** Chỉ công ty sở hữu Challenge mới được đọc danh sách. Công ty khác nhận `403 Forbidden` và không nhận dữ liệu Submission.
 - **Response (200 OK):**
   > **NGHIÊM CẤM:** Trả về data dính dáng đến profile ứng viên. Chỉ trả list chứa `hash_id` và link file.
   ```json
@@ -276,6 +277,7 @@ Tài liệu này quy định chi tiết các API Contracts thuộc phạm vi MVP
 
 - **Mô tả:** Gửi kết quả chấm điểm Rubric.
 - **Auth:** `Bearer <Employer_Token>`
+- **Ownership:** Submission phải thuộc Challenge của công ty hiện tại. Tất cả `criteria_id` cũng phải thuộc chính Challenge đó. Kiểm tra hoàn tất trước khi tạo Evaluation hoặc đổi status.
 - **Request Body:**
   ```json
   {
@@ -316,10 +318,27 @@ Tài liệu này quy định chi tiết các API Contracts thuộc phạm vi MVP
   }
   ```
 
+#### [POST] `/api/v1/assessment/submissions/{submission_id}/reject`
+
+- **Mô tả:** Từ chối bài nộp nhưng không mở khóa danh tính Candidate.
+- **Auth:** `Bearer <Employer_Token>`
+- **Ownership:** Chỉ công ty sở hữu Challenge của Submission mới được từ chối. Submission đã unlock không thể bị thay đổi.
+- **Response (200 OK):**
+  ```json
+  {
+    "status": "success",
+    "data": {
+      "submission_id": "f5e921dd-14bb-421c-a32e-11bc9aef4421",
+      "status": "Rejected"
+    }
+  }
+  ```
+
 #### [POST] `/api/v1/assessment/submissions/{submission_id}/unlock`
 
 - **Mô tả:** Duyệt bài và Mở khóa danh tính (Bắn Event chứa `user_id`, `challenge_id` sang Profile Module xử lý).
 - **Auth:** `Bearer <Employer_Token>`
+- **Ownership:** Chỉ công ty sở hữu Challenge của Submission mới được approve và unlock. Ownership được kiểm tra trong transaction trước mọi thao tác cập nhật status, identity mapping hoặc verified evidence.
 - **Request Body:**
   ```json
   {

@@ -3,6 +3,7 @@ import {
   submitSolution,
   getSubmissionsByChallenge,
   evaluateSubmission,
+  rejectSubmission,
   unlockCandidate,
 } from '../controllers/submission.controller.js'
 import { getPresignedUrl } from '../controllers/upload.controller.js'
@@ -54,6 +55,13 @@ router.post(
   authorize('EMPLOYER'),
   validateBody(evaluateSubmissionSchema),
   evaluateSubmission,
+)
+
+router.post(
+  '/submissions/:submission_id/reject',
+  authenticate,
+  authorize('EMPLOYER'),
+  rejectSubmission,
 )
 
 router.post(

@@ -1,60 +1,56 @@
 import { AppError } from '../../shared/utils/AppError.js'
 import prisma from '../../shared/config/prisma.js'
-import * as companyService from '../../iam/services/company.service.js' // Internal Service Interface
+import { assertChallengeOwnership } from './ownership.service.js'
 
 export const evaluateSubmission = async (
   submissionId,
   { evaluations, generalComment },
-  currentUserId,
+  companyId,
+  database = prisma,
 ) => {
-  // Lấy bài nộp
-  const submission = await prisma.submission.findUnique({
-    where: { id: submissionId },
-    include: { identityMapping: true },
-  })
-
-  if (!submission) throw new AppError('Không tìm thấy submission', 404, 'ASSESS_002')
-  if (submission.identityMapping.isUnlocked) {
-    throw new AppError(
-      'Cannot evaluate. This submission has already been unlocked and frozen.',
-      403,
-      'ASSESS_006',
-    )
-  }
-
-  // Lấy thử thách để kiểm tra quyền sở hữu của công ty
-  const challenge = await prisma.challenge.findUnique({
-    where: { id: submission.challengeId },
-  })
-
-  if (!challenge) throw new AppError('Không tìm thấy challenge tương ứng', 404, 'CHAL_004')
-
-  const { company_id: companyId } = await companyService.getCompanyByUserId(currentUserId)
-  const isOwner = challenge.companyId === companyId
-
-  if (!isOwner) {
-    throw new AppError(
-      'Forbidden: Bạn không có quyền chấm điểm bài nộp của công ty khác!',
-      403,
-      'ASSESS_005',
-    )
-  }
-  await prisma.$transaction([
-    ...evaluations.map((e) =>
-      prisma.evaluationResult.create({
-        data: {
-          submissionId,
-          criteriaId: e.criteriaId,
-          score: e.score,
-          comment: e.comment,
-        },
-      }),
-    ),
-    prisma.submission.update({
+  await database.$transaction(async (tx) => {
+    const submission = await tx.submission.findUnique({
       where: { id: submissionId },
-      data: { status: 'EVALUATED', generalComment: generalComment },
-    }),
-  ])
+      include: { identityMapping: true },
+    })
+
+    if (!submission) throw new AppError('Không tìm thấy submission', 404, 'ASSESS_002')
+
+    const challenge = await tx.challenge.findUnique({ where: { id: submission.challengeId } })
+    assertChallengeOwnership(challenge, companyId)
+
+    if (!submission.identityMapping) {
+      throw new AppError('Không tìm thấy identity mapping', 404, 'ASSESS_003')
+    }
+    if (submission.identityMapping.isUnlocked) {
+      throw new AppError(
+        'Cannot evaluate. This submission has already been unlocked and frozen.',
+        403,
+        'ASSESS_006',
+      )
+    }
+
+    const criteriaIds = [...new Set(evaluations.map((evaluation) => evaluation.criteriaId))]
+    const criteriaCount = await tx.rubricCriteria.count({
+      where: { id: { in: criteriaIds }, challengeId: submission.challengeId },
+    })
+    if (criteriaCount !== criteriaIds.length) {
+      throw new AppError('Rubric criteria không thuộc challenge của submission.', 400, 'ASSESS_007')
+    }
+
+    await tx.evaluationResult.createMany({
+      data: evaluations.map((evaluation) => ({
+        submissionId,
+        criteriaId: evaluation.criteriaId,
+        score: evaluation.score,
+        comment: evaluation.comment,
+      })),
+    })
+    await tx.submission.update({
+      where: { id: submissionId },
+      data: { status: 'EVALUATED', generalComment },
+    })
+  })
 
   const totalScore = evaluations.reduce((sum, e) => sum + e.score, 0)
 

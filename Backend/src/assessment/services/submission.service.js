@@ -14,6 +14,7 @@ import { generateHashId } from '../../shared/utils/hashId.js'
 import prisma from '../../shared/config/prisma.js'
 import * as submissionRepository from '../repositories/submission.repository.js'
 import * as userLookupService from '../../iam/services/user-lookup.service.js' // IAM Interface
+import { assertChallengeOwnership } from './ownership.service.js'
 import { queueScanJob } from '../jobs/scan.job.js'
 import { sendSubmissionConfirmationEmail } from './notification.service.js'
 
@@ -74,7 +75,10 @@ export const submitSolution = async ({ userId, challengeId, solutionUrl, challen
 }
 
 // ─── GET /api/v1/assessment/challenges/:challenge_id/submissions ─────────────
-export const getSubmissionsByChallenge = async (challengeId) => {
+export const getSubmissionsByChallenge = async (challengeId, companyId, database = prisma) => {
+  const challenge = await database.challenge.findUnique({ where: { id: challengeId } })
+  assertChallengeOwnership(challenge, companyId)
+
   const grouped = await submissionRepository.findSubmissionsByChallengeGroupedByHash(challengeId)
 
   // Mỗi danh tính ẩn danh có một mảng submissions.
@@ -91,9 +95,40 @@ export const getSubmissionsByChallenge = async (challengeId) => {
   }))
 }
 
+// ─── POST /api/v1/assessment/submissions/:submission_id/reject ──────────────
+export const rejectSubmission = async (submissionId, companyId, database = prisma) => {
+  return database.$transaction(async (tx) => {
+    const submission = await tx.submission.findUnique({
+      where: { id: submissionId },
+      include: { identityMapping: true },
+    })
+    if (!submission) throw new AppError('Không tìm thấy submission', 404, 'ASSESS_002')
+
+    const challenge = await tx.challenge.findUnique({ where: { id: submission.challengeId } })
+    assertChallengeOwnership(challenge, companyId)
+
+    if (!submission.identityMapping) {
+      throw new AppError('Không tìm thấy identity mapping', 404, 'ASSESS_003')
+    }
+    if (submission.identityMapping.isUnlocked) {
+      throw new AppError(
+        'Cannot reject. This submission has already been unlocked and frozen.',
+        403,
+        'ASSESS_006',
+      )
+    }
+
+    const rejected = await tx.submission.update({
+      where: { id: submissionId },
+      data: { status: 'REJECTED' },
+    })
+    return { submissionId: rejected.id, status: rejected.status }
+  })
+}
+
 // ─── POST /api/v1/assessment/submissions/:submission_id/unlock ──────────────
-export const unlockCandidate = async (submissionId) => {
-  const mappingResult = await prisma.$transaction(async (tx) => {
+export const unlockCandidate = async (submissionId, companyId, database = prisma) => {
+  const mappingResult = await database.$transaction(async (tx) => {
     // Bước 1: Lấy bài nộp, kèm theo bảng IdentityMapping (để lấy cờ isUnlocked)
     // và bảng Điểm (EvaluationResult) kèm tiêu chí (Criteria) để chuẩn bị copy dữ liệu
     const submission = await tx.submission.findUnique({
@@ -109,6 +144,9 @@ export const unlockCandidate = async (submissionId) => {
     })
 
     if (!submission) throw new AppError('Không tìm thấy submission', 404, 'ASSESS_002')
+
+    const challenge = await tx.challenge.findUnique({ where: { id: submission.challengeId } })
+    assertChallengeOwnership(challenge, companyId)
 
     const mapping = submission.identityMapping
     if (!mapping) throw new AppError('Không tìm thấy identity mapping', 404, 'ASSESS_003')
@@ -130,13 +168,7 @@ export const unlockCandidate = async (submissionId) => {
       data: { isUnlocked: true },
     })
 
-    // Bước 5: Lấy thông tin Challenge để làm Snapshot
-    const challenge = await tx.challenge.findUnique({
-      where: { id: mapping.challengeId },
-    })
-    if (!challenge) throw new AppError('Không tìm thấy challenge tương ứng', 404, 'CHAL_004')
-
-    // Tính toán điểm tổng theo trọng số (weighted score) trên thang điểm 100
+    // Bước 5: Tính toán điểm tổng theo trọng số (weighted score) trên thang điểm 100
     let totalScore = 0
     if (submission.evaluationResults && submission.evaluationResults.length > 0) {
       const weightedSum = submission.evaluationResults.reduce((sum, er) => {

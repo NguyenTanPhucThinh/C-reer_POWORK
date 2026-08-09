@@ -73,6 +73,13 @@ export const assessmentHandlers = [
     return HttpResponse.json(success(response), { status: 201 });
   }),
 
+  http.post(`${BASE}/submissions/:submission_id/reject`, ({ params }) => {
+    return HttpResponse.json(
+      success({ submission_id: String(params.submission_id), status: 'Rejected' as const }),
+      { status: 200 }
+    );
+  }),
+
   http.post(`${BASE}/submissions/:submission_id/unlock`, async ({ request }) => {
     const body = (await request.json()) as UnlockRequest;
     if (body.action !== 'APPROVE') {

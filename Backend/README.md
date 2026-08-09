@@ -516,6 +516,7 @@ brew services stop postgresql
 | POST   | `/api/v1/assessment/submissions`                          | `{challenge_id, solution_url}`   | CANDIDATE | Nộp bài — server tự sinh `hash_id`     |
 | GET    | `/api/v1/assessment/challenges/:challenge_id/submissions` | —                                | EMPLOYER  | Xem bài nộp **(chỉ thấy `hash_id`)**   |
 | POST   | `/api/v1/assessment/submissions/:submission_id/evaluate`  | `{evaluations, general_comment}` | EMPLOYER  | Chấm điểm theo từng `criteria_id`      |
+| POST   | `/api/v1/assessment/submissions/:submission_id/reject`    | —                                | EMPLOYER  | Từ chối bài nhưng vẫn giữ ẩn danh      |
 | POST   | `/api/v1/assessment/submissions/:submission_id/unlock`    | `{action: "APPROVE"}`            | EMPLOYER  | **Duy nhất lúc này mới thấy tên thật** |
 
 **Response mẫu — nộp bài** (không có `user_id`):

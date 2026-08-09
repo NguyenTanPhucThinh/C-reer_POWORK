@@ -13,6 +13,7 @@ import type {
   SubmitSolutionRequest,
   EvaluateRequest,
   EvaluateResponse,
+  RejectSubmissionResponse,
   UnlockRequest,
   UnlockResponse,
   GetPresignedUploadUrlRequest,
@@ -53,6 +54,10 @@ export const assessmentAPI = {
   evaluate: (submissionId: string, payload: EvaluateRequest) =>
     unwrap<EvaluateResponse>(
       apiClient.post(`/assessment/submissions/${submissionId}/evaluate`, payload)
+    ),
+  reject: (submissionId: string) =>
+    unwrap<RejectSubmissionResponse>(
+      apiClient.post(`/assessment/submissions/${submissionId}/reject`)
     ),
   unlock: (submissionId: string, payload: UnlockRequest = { action: 'APPROVE' }) =>
     unwrap<UnlockResponse>(
