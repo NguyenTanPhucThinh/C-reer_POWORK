@@ -9,6 +9,7 @@ import {
 import { getPresignedUrl } from '../controllers/upload.controller.js'
 import {
   createVerificationQuestions,
+  createVerificationEvent,
   resumeVerification,
   startVerification,
 } from '../controllers/verification.controller.js'
@@ -22,6 +23,7 @@ import {
   presignedUrlQuerySchema,
   createSubmissionSchema,
   startVerificationSchema,
+  verificationEventSchema,
   evaluateSubmissionSchema,
   unlockSubmissionSchema,
 } from '../models/submission.schema.js'
@@ -67,6 +69,14 @@ router.post(
   authenticate,
   authorize('CANDIDATE'),
   createVerificationQuestions,
+)
+
+router.post(
+  '/verifications/:verification_id/events',
+  authenticate,
+  authorize('CANDIDATE'),
+  validateBody(verificationEventSchema),
+  createVerificationEvent,
 )
 
 // Employer xem danh sách bài nộp — group theo hash_id, nhiều version

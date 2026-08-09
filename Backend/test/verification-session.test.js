@@ -2,8 +2,12 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 
-import { startVerificationSchema } from '../src/assessment/models/submission.schema.js'
 import {
+  startVerificationSchema,
+  verificationEventSchema,
+} from '../src/assessment/models/submission.schema.js'
+import {
+  recordVerificationEvent,
   resumeCandidateVerification,
   startCandidateVerification,
 } from '../src/assessment/services/verification.service.js'
@@ -194,4 +198,153 @@ test('both session routes require Candidate authentication', async () => {
     assert.match(route, /authenticate/)
     assert.match(route, /authorize\('CANDIDATE'\)/)
   }
+})
+
+const createEventDatabase = ({
+  ownerId = 'candidate-1',
+  status = 'PENDING_CAMERA',
+  expiresAt = new Date('2026-08-09T10:15:00.000Z'),
+  selectedOralDurationSeconds = 60,
+} = {}) => {
+  let updateCount = 0
+  const state = {
+    id: 'verification-1',
+    status,
+    expiresAt,
+    selectedOralDurationSeconds,
+    oralStartedAt: null,
+    oralCompletedAt: null,
+    answeringStartedAt: status === 'ANSWERING' ? now : null,
+    cameraInterruptedAt: null,
+    cameraInterruptionCount: 0,
+    cameraInterruptionDurationSeconds: 0,
+    focusLossCount: 0,
+    pasteBlockedCount: 0,
+    selectAllBlockedCount: 0,
+    copyBlockedCount: 0,
+    dropBlockedCount: 0,
+    submission: { identityMapping: { userId: ownerId } },
+  }
+
+  const matches = (where) => {
+    if (where.id !== state.id) return false
+    if (typeof where.status === 'string' && where.status !== state.status) return false
+    if (where.status?.in && !where.status.in.includes(state.status)) return false
+    for (const field of [
+      'oralStartedAt',
+      'oralCompletedAt',
+      'answeringStartedAt',
+      'cameraInterruptedAt',
+    ]) {
+      if (!(field in where)) continue
+      const expected = where[field]
+      const actual = state[field]
+      if (expected === null ? actual !== null : actual?.getTime() !== expected.getTime())
+        return false
+    }
+    return true
+  }
+
+  const database = {
+    submissionVerification: {
+      findUnique: async ({ where }) => (where.id === state.id ? structuredClone(state) : null),
+      updateMany: async ({ where, data }) => {
+        if (!matches(where)) return { count: 0 }
+        updateCount += 1
+        for (const [field, value] of Object.entries(data)) {
+          state[field] = value?.increment === undefined ? value : state[field] + value.increment
+        }
+        return { count: 1 }
+      },
+    },
+  }
+
+  return { database, state, getUpdateCount: () => updateCount }
+}
+
+const event = (database, name, at = now, userId = 'candidate-1') =>
+  recordVerificationEvent('verification-1', userId, name, database, at)
+
+test('the event API accepts only documented names and no clipboard payload', () => {
+  const events = [
+    'CAMERA_INTERRUPTED',
+    'CAMERA_RESTORED',
+    'FOCUS_LOST',
+    'PASTE_BLOCKED',
+    'SELECT_ALL_BLOCKED',
+    'COPY_BLOCKED',
+    'DROP_BLOCKED',
+    'ORAL_STARTED',
+    'ORAL_COMPLETED',
+    'ANSWERING_STARTED',
+  ]
+  for (const name of events) {
+    assert.equal(verificationEventSchema.safeParse({ event: name }).success, true)
+  }
+  assert.equal(verificationEventSchema.safeParse({ event: 'KEYSTROKE' }).success, false)
+  assert.equal(
+    verificationEventSchema.safeParse({ event: 'PASTE_BLOCKED', clipboard: 'secret' }).success,
+    false,
+  )
+})
+
+test('foreign, expired, and completed sessions reject events without writes', async () => {
+  const scenarios = [
+    [{ ownerId: 'candidate-2' }, 'VERIFICATION_FORBIDDEN'],
+    [{ expiresAt: new Date('2026-08-09T09:59:59.000Z') }, 'VERIFICATION_EXPIRED'],
+    [{ status: 'READY' }, 'VERIFICATION_ALREADY_COMPLETED'],
+  ]
+  for (const [options, errorCode] of scenarios) {
+    const session = createEventDatabase(options)
+    await assert.rejects(
+      event(session.database, 'FOCUS_LOST'),
+      (error) => error?.errorCode === errorCode,
+    )
+    assert.equal(session.getUpdateCount(), 0)
+  }
+})
+
+test('integrity counters increment atomically in the answering phase', async () => {
+  const { database, state } = createEventDatabase({ status: 'ANSWERING' })
+  for (const name of [
+    'FOCUS_LOST',
+    'PASTE_BLOCKED',
+    'SELECT_ALL_BLOCKED',
+    'COPY_BLOCKED',
+    'DROP_BLOCKED',
+  ]) {
+    await event(database, name)
+  }
+
+  assert.equal(state.focusLossCount, 1)
+  assert.equal(state.pasteBlockedCount, 1)
+  assert.equal(state.selectAllBlockedCount, 1)
+  assert.equal(state.copyBlockedCount, 1)
+  assert.equal(state.dropBlockedCount, 1)
+})
+
+test('oral duration uses server time and never exceeds the selected limit', async () => {
+  const { database, state } = createEventDatabase({ selectedOralDurationSeconds: 15 })
+  await event(database, 'ORAL_STARTED')
+  await event(database, 'ORAL_COMPLETED', new Date(now.getTime() + 45_000))
+
+  assert.equal(state.status, 'CAMERA_ACTIVE')
+  assert.equal(state.oralStartedAt.toISOString(), now.toISOString())
+  assert.equal(state.oralCompletedAt.toISOString(), '2026-08-09T10:00:45.000Z')
+  assert.equal(state.actualOralDurationSeconds, 15)
+})
+
+test('Camera interruption events are idempotent and use server duration', async () => {
+  const { database, state } = createEventDatabase({ status: 'CAMERA_ACTIVE' })
+  const interruptedAt = new Date(now.getTime() + 3_000)
+  const restoredAt = new Date(now.getTime() + 8_000)
+
+  await event(database, 'CAMERA_INTERRUPTED', interruptedAt)
+  await event(database, 'CAMERA_INTERRUPTED', interruptedAt)
+  await event(database, 'CAMERA_RESTORED', restoredAt)
+  await event(database, 'CAMERA_RESTORED', restoredAt)
+
+  assert.equal(state.cameraInterruptionCount, 1)
+  assert.equal(state.cameraInterruptionDurationSeconds, 5)
+  assert.equal(state.cameraInterruptedAt, null)
 })

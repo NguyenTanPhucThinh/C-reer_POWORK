@@ -1,6 +1,7 @@
 import { sendSuccess } from '../../shared/utils/response.js'
 import {
   resumeCandidateVerification,
+  recordVerificationEvent,
   startCandidateVerification,
 } from '../services/verification.service.js'
 import { getOrCreateVerificationQuestions } from '../services/verification-question.service.js'
@@ -54,4 +55,9 @@ export const createVerificationQuestions = async (req, res) => {
       maximum_length: question.maximumLength,
     })),
   })
+}
+
+export const createVerificationEvent = async (req, res) => {
+  await recordVerificationEvent(req.params.verification_id, req.user.userId, req.body.event)
+  return res.status(204).send()
 }

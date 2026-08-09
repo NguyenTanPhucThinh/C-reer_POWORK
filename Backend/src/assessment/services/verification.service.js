@@ -13,6 +13,14 @@ const EXPIRABLE_STATUSES = new Set([
 ])
 const SUBMITTED_FILE_STATUSES = new Set(['PENDING_SCAN', 'SAFE'])
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+const CAMERA_ACTIVE_STATUSES = ['CAMERA_ACTIVE', 'GENERATING_QUESTIONS', 'ANSWERING']
+const COUNTER_EVENTS = {
+  FOCUS_LOST: { field: 'focusLossCount', statuses: CAMERA_ACTIVE_STATUSES },
+  PASTE_BLOCKED: { field: 'pasteBlockedCount', statuses: ['ANSWERING'] },
+  SELECT_ALL_BLOCKED: { field: 'selectAllBlockedCount', statuses: ['ANSWERING'] },
+  COPY_BLOCKED: { field: 'copyBlockedCount', statuses: ['ANSWERING'] },
+  DROP_BLOCKED: { field: 'dropBlockedCount', statuses: ['ANSWERING'] },
+}
 const SESSION_SELECT = {
   id: true,
   submissionId: true,
@@ -154,4 +162,157 @@ export const resumeCandidateVerification = async (
     throw new AppError('Phiên xác thực đã hết hạn.', 410, 'VERIFICATION_EXPIRED')
   }
   return toSession(verification)
+}
+
+const invalidEventState = () =>
+  new AppError(
+    'Sự kiện không hợp lệ với trạng thái phiên hiện tại.',
+    409,
+    'VERIFICATION_INVALID_STATE',
+  )
+
+const loadEventSession = (verificationId, database) =>
+  database.submissionVerification.findUnique({
+    where: { id: verificationId },
+    select: {
+      id: true,
+      status: true,
+      expiresAt: true,
+      selectedOralDurationSeconds: true,
+      oralStartedAt: true,
+      oralCompletedAt: true,
+      answeringStartedAt: true,
+      cameraInterruptedAt: true,
+      submission: { select: { identityMapping: { select: { userId: true } } } },
+    },
+  })
+
+const assertEventAccess = (verification, userId, now) => {
+  if (!verification) {
+    throw new AppError('Không tìm thấy phiên xác thực.', 404, 'VERIFICATION_NOT_FOUND')
+  }
+  if (verification.submission.identityMapping?.userId !== userId) {
+    throw new AppError(
+      'Bạn không có quyền cập nhật phiên xác thực này.',
+      403,
+      'VERIFICATION_FORBIDDEN',
+    )
+  }
+  if (verification.status === 'EXPIRED') {
+    throw new AppError('Phiên xác thực đã hết hạn.', 410, 'VERIFICATION_EXPIRED')
+  }
+  if (FINAL_STATUSES.has(verification.status)) {
+    throw new AppError(
+      'Phiên xác thực đã hoàn tất và không nhận thêm sự kiện.',
+      409,
+      'VERIFICATION_ALREADY_COMPLETED',
+    )
+  }
+  if (verification.expiresAt <= now) {
+    throw new AppError('Phiên xác thực đã hết hạn.', 410, 'VERIFICATION_EXPIRED')
+  }
+}
+
+const updatePhase = async (verificationId, database, where, data) => {
+  const updated = await database.submissionVerification.updateMany({
+    where: { id: verificationId, ...where },
+    data,
+  })
+  if (updated.count !== 1) throw invalidEventState()
+}
+
+export const recordVerificationEvent = async (
+  verificationId,
+  userId,
+  event,
+  database = prisma,
+  now = new Date(),
+) => {
+  const verification = await loadEventSession(verificationId, database)
+  assertEventAccess(verification, userId, now)
+
+  const counter = COUNTER_EVENTS[event]
+  if (counter) {
+    return updatePhase(
+      verificationId,
+      database,
+      { status: { in: counter.statuses } },
+      { [counter.field]: { increment: 1 } },
+    )
+  }
+
+  if (event === 'ORAL_STARTED') {
+    if (verification.oralStartedAt) return
+    return updatePhase(
+      verificationId,
+      database,
+      { status: 'PENDING_CAMERA', oralStartedAt: null },
+      { status: 'CAMERA_ACTIVE', oralStartedAt: now },
+    )
+  }
+
+  if (event === 'ORAL_COMPLETED') {
+    if (verification.oralCompletedAt) return
+    if (!verification.oralStartedAt || verification.cameraInterruptedAt) {
+      throw invalidEventState()
+    }
+    const elapsedSeconds = Math.max(
+      0,
+      Math.ceil((now.getTime() - verification.oralStartedAt.getTime()) / 1000),
+    )
+    return updatePhase(
+      verificationId,
+      database,
+      { status: 'CAMERA_ACTIVE', oralCompletedAt: null, cameraInterruptedAt: null },
+      {
+        oralCompletedAt: now,
+        actualOralDurationSeconds: Math.min(
+          elapsedSeconds,
+          verification.selectedOralDurationSeconds,
+        ),
+      },
+    )
+  }
+
+  if (event === 'ANSWERING_STARTED') {
+    if (verification.answeringStartedAt) return
+    return updatePhase(
+      verificationId,
+      database,
+      { status: 'ANSWERING', answeringStartedAt: null },
+      { answeringStartedAt: now },
+    )
+  }
+
+  if (event === 'CAMERA_INTERRUPTED') {
+    if (verification.cameraInterruptedAt) return
+    return updatePhase(
+      verificationId,
+      database,
+      { status: { in: CAMERA_ACTIVE_STATUSES }, cameraInterruptedAt: null },
+      { cameraInterruptedAt: now, cameraInterruptionCount: { increment: 1 } },
+    )
+  }
+
+  if (event === 'CAMERA_RESTORED') {
+    if (!verification.cameraInterruptedAt) return
+    const duration = Math.max(
+      0,
+      Math.ceil((now.getTime() - verification.cameraInterruptedAt.getTime()) / 1000),
+    )
+    return updatePhase(
+      verificationId,
+      database,
+      {
+        status: { in: CAMERA_ACTIVE_STATUSES },
+        cameraInterruptedAt: verification.cameraInterruptedAt,
+      },
+      {
+        cameraInterruptedAt: null,
+        cameraInterruptionDurationSeconds: { increment: duration },
+      },
+    )
+  }
+
+  throw new AppError('Sự kiện xác thực không hợp lệ.', 400, 'VERIFICATION_VALIDATION')
 }

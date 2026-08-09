@@ -40,12 +40,15 @@ const createDatabase = ({
   status = 'CAMERA_ACTIVE',
   expiresAt = new Date('2026-08-09T10:15:00.000Z'),
   questions = null,
+  oralCompletedAt = now,
 } = {}) => {
   const state = {
     id: 'verification-1',
     status,
     expiresAt,
     questions,
+    oralCompletedAt,
+    cameraInterruptedAt: null,
     answeringStartedAt: null,
     submission: {
       challengeId: 'challenge-1',
@@ -209,6 +212,7 @@ test('foreign, expired, and completed sessions never call Gemini', async () => {
     [{ ownerId: 'candidate-2' }, 'VERIFICATION_FORBIDDEN'],
     [{ expiresAt: new Date('2026-08-09T09:59:59.000Z') }, 'VERIFICATION_EXPIRED'],
     [{ status: 'READY' }, 'VERIFICATION_ALREADY_COMPLETED'],
+    [{ oralCompletedAt: null }, 'VERIFICATION_INVALID_STATE'],
   ]
 
   for (const [options, errorCode] of scenarios) {

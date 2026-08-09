@@ -128,6 +128,8 @@ const loadVerification = (verificationId, database) =>
       status: true,
       expiresAt: true,
       questions: true,
+      oralCompletedAt: true,
+      cameraInterruptedAt: true,
       submission: {
         select: {
           challengeId: true,
@@ -171,7 +173,11 @@ export const getOrCreateVerificationQuestions = async (
   const verification = await loadVerification(verificationId, database)
   assertQuestionAccess(verification, userId, now)
   if (verification.questions) return toResult(verification)
-  if (verification.status !== 'CAMERA_ACTIVE') {
+  if (
+    verification.status !== 'CAMERA_ACTIVE' ||
+    !verification.oralCompletedAt ||
+    verification.cameraInterruptedAt
+  ) {
     throw new AppError(
       'Phiên xác thực chưa sẵn sàng để tạo câu hỏi.',
       409,

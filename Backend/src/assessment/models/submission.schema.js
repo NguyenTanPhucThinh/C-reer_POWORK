@@ -22,6 +22,24 @@ export const startVerificationSchema = z
   })
   .strict()
 
+// POST /assessment/verifications/:verification_id/events
+export const verificationEventSchema = z
+  .object({
+    event: z.enum([
+      'CAMERA_INTERRUPTED',
+      'CAMERA_RESTORED',
+      'FOCUS_LOST',
+      'PASTE_BLOCKED',
+      'SELECT_ALL_BLOCKED',
+      'COPY_BLOCKED',
+      'DROP_BLOCKED',
+      'ORAL_STARTED',
+      'ORAL_COMPLETED',
+      'ANSWERING_STARTED',
+    ]),
+  })
+  .strict()
+
 // POST /assessment/submissions/:submission_id/evaluate
 export const evaluateSubmissionSchema = z.object({
   evaluations: z
