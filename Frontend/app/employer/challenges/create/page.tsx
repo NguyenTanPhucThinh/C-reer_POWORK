@@ -1,21 +1,53 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
+import axios from 'axios';
 import { RubricBuilder } from '@/components/rubric/RubricBuilder';
 import { emptyCriteria } from '@/lib/utils/rubric';
-import { challengeAPI } from '@/lib/api/endpoints';
-import type { CreateChallengeRequest, RubricCriteriaInput } from '@/lib/types/challenge';
-import { AxiosError } from 'axios';
+import { useCreateChallenge } from '@/lib/hooks/useChallenges';
+import type { Challenge, CreateChallengeRequest, RubricCriteriaInput } from '@/lib/types/challenge';
+
+type ModerationIssue = {
+  category: string;
+  message: string;
+  suggestion: string;
+};
+
+type ModerationErrorResponse = {
+  error_code?: string;
+  message?: string;
+  details?: {
+    decision: 'NEEDS_REVISION';
+    summary: string;
+    issues: ModerationIssue[];
+  };
+};
+
+type SubmissionResult =
+  | { type: 'published'; challenge: Challenge }
+  | { type: 'revision'; summary: string; issues: ModerationIssue[] }
+  | { type: 'service-error' }
+  | null;
+
+const categoryLabels: Record<string, string> = {
+  REAL_COMPANY_DATA: 'Dữ liệu doanh nghiệp thực tế',
+  REAL_BUSINESS_PROBLEM: 'Vấn đề kinh doanh thực tế',
+  SCOPE_TOO_LARGE: 'Phạm vi quá lớn',
+  COMPLETE_DELIVERABLE: 'Yêu cầu sản phẩm hoàn chỉnh',
+  DIRECT_COMMERCIAL_VALUE: 'Giá trị thương mại trực tiếp',
+  UNCLEAR_EVALUATION_SCOPE: 'Phạm vi đánh giá chưa rõ',
+};
 
 export default function CreateChallengePage() {
+  const createChallenge = useCreateChallenge();
   const [rubrics, setRubrics] = useState<RubricCriteriaInput[]>([emptyCriteria()]);
   const [industry, setIndustry] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [deadline, setDeadline] = useState('');
-  // CHỖ THÊM MỚI 1: State kiểm soát trạng thái hiển thị của Box Phát hành
-  const [isPublished, setIsPublished] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [result, setResult] = useState<SubmissionResult>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Hệ thống style đã scale-up kích thước chữ và padding phù hợp với font nền lớn của Dashboard
@@ -85,7 +117,21 @@ export default function CreateChallengePage() {
   } as const;
 
   const handleSubmit = async () => {
+    if (isLoading) return;
+
+    if (!title.trim() || !industry.trim() || !description.trim() || !deadline) {
+      setError('Vui lòng điền đầy đủ tiêu đề, lĩnh vực, mô tả và deadline.');
+      return;
+    }
+
+    const deadlineDate = new Date(deadline);
+    if (Number.isNaN(deadlineDate.getTime()) || deadlineDate.getTime() <= Date.now()) {
+      setError('Deadline phải là một thời điểm trong tương lai.');
+      return;
+    }
+
     setIsLoading(true);
+    setResult(null);
     setError(null);
 
     try {
@@ -93,24 +139,40 @@ export default function CreateChallengePage() {
         title,
         industry,
         description,
-        deadline: new Date(deadline).toISOString(),
+        deadline: deadlineDate.toISOString(),
         rubrics,
       };
 
-      const challenge = await challengeAPI.create(challengeData);
-      setIsPublished(true);
-      console.log('Challenge created successfully:', challenge);
+      const challenge = await createChallenge.mutateAsync(challengeData);
+      setResult({ type: 'published', challenge });
     } catch (err: unknown) {
-      // Catch AxiosError
-      if (err instanceof AxiosError) {
-        setError(
-          err.response?.data?.message || 'Đã xảy ra lỗi khi tạo challenge. Vui lòng thử lại.'
-        );
-        console.error('Axios error during challenge creation:', err.response?.data);
-      } else {
-        setError('Đã xảy ra lỗi không mong đợi. Vui lòng thử lại sau.');
-        console.error('Lỗi không mong đợi:', err);
+      if (axios.isAxiosError<ModerationErrorResponse>(err)) {
+        const response = err.response;
+        const data = response?.data;
+
+        if (data?.error_code === 'CHAL_MODERATION_REQUIRED' && data.details) {
+          setResult({
+            type: 'revision',
+            summary: data.details.summary,
+            issues: data.details.issues,
+          });
+          return;
+        }
+
+        if (
+          !response ||
+          response.status >= 500 ||
+          ['CHAL_MODERATION_UNAVAILABLE', 'UPSTREAM_UNAVAILABLE'].includes(data?.error_code ?? '')
+        ) {
+          setResult({ type: 'service-error' });
+          return;
+        }
+
+        setError(data?.message || 'Dữ liệu Challenge chưa hợp lệ. Vui lòng kiểm tra lại.');
+        return;
       }
+
+      setResult({ type: 'service-error' });
     } finally {
       setIsLoading(false);
     }
@@ -143,7 +205,7 @@ export default function CreateChallengePage() {
               Tiêu đề Challenge <span style={{ color: '#e05c5c' }}>*</span>
             </p>
             <input
-              type="datetime-local"
+              type="text"
               style={styles.input}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -201,6 +263,7 @@ export default function CreateChallengePage() {
               Deadline <span style={{ color: '#e05c5c' }}>*</span>
             </p>
             <input
+              type="datetime-local"
               style={styles.input}
               value={deadline}
               onChange={(e) => setDeadline(e.target.value)}
@@ -238,92 +301,96 @@ export default function CreateChallengePage() {
             }}
           >
             <span style={{ ...styles.btnSecondary, flex: 1 }}>Lưu nháp</span>
-            {/* CHỖ SỬA 2: Thêm onClick kích hoạt show box invite code khi bấm Phát hành */}
-            <span
+            <button
+              type="button"
+              disabled={isLoading}
               style={{
                 ...styles.btnPrimary,
                 flex: 1,
                 opacity: isLoading ? 0.7 : 1,
                 cursor: isLoading ? 'not-allowed' : 'pointer',
               }}
-              onClick={isLoading ? undefined : handleSubmit}
+              onClick={handleSubmit}
             >
-              {isLoading ? 'Đang phát hành...' : 'Phát hành →'}
-            </span>
+              {isLoading ? 'Đang kiểm tra...' : 'Kiểm tra và phát hành'}
+            </button>
           </div>
 
-          {/* CHỖ SỬA 3: Bọc điều kiện {isPublished && (...)} bên ngoài Box Invite */}
-          {isPublished && (
-            <div
-              style={{
-                marginTop: '24px',
-                padding: '20px',
-                background: 'var(--bg)',
-                border: '0.5px solid rgba(34,197,94,0.35)',
-                borderRadius: '10px',
-              }}
-            >
-              <p
-                style={{
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  color: 'var(--green)',
-                  marginBottom: '12px',
-                }}
-              >
-                ✅ Challenge đã phát hành — Mã invite
-              </p>
-              <div
-                style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '12px' }}
-              >
-                <div
-                  style={{
-                    flex: 1,
-                    padding: '12px 16px',
-                    background: 'var(--bg3)',
-                    border: '0.5px solid var(--border2)',
-                    borderRadius: '8px',
-                    fontFamily: 'monospace',
-                    fontSize: '16px',
-                    fontWeight: '600',
-                    letterSpacing: '2px',
-                    color: 'var(--green)',
-                  }}
-                >
-                  VNG-2026-CACHE
+          <div aria-live="polite">
+            {isLoading && (
+              <div className="mt-6 flex items-center gap-3 rounded-lg border border-info/30 bg-info-bg p-4 text-info">
+                <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-info/30 border-t-info" />
+                <div>
+                  <p className="text-sm font-semibold">Đang kiểm tra Challenge...</p>
+                  <p className="mt-1 text-xs text-foreground-secondary">
+                    Hệ thống đang đánh giá phạm vi và nội dung trước khi phát hành.
+                  </p>
                 </div>
-                <span style={{ ...styles.btnSecondary, fontSize: '13px', padding: '11px 14px' }}>
-                  📋 Copy
-                </span>
-                <span style={{ ...styles.btnSecondary, fontSize: '13px', padding: '11px 14px' }}>
-                  ↗ Share
-                </span>
               </div>
-              <div
-                style={{
-                  display: 'flex',
-                  gap: '16px',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <span style={{ fontSize: '13px', color: 'var(--text3)' }}>
-                  🌐 Challenge công khai — ai cũng có thể tìm thấy
-                </span>
-                <span
-                  style={{
-                    fontSize: '13px',
-                    color: 'var(--accent)',
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    fontWeight: '500',
-                  }}
-                >
-                  Đổi thành riêng tư →
-                </span>
+            )}
+
+            {result?.type === 'published' && (
+              <div className="mt-6 rounded-lg border border-success/35 bg-success-bg p-5">
+                <p className="text-sm font-semibold text-success">Challenge đã được tạo</p>
+                <p className="mt-2 text-sm leading-6 text-foreground-secondary">
+                  “{result.challenge.title}” đã vượt qua kiểm duyệt và được phát hành thành công.
+                </p>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <Link
+                    href="/employer/dashboard"
+                    className="rounded-lg bg-success px-4 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+                  >
+                    Về Dashboard
+                  </Link>
+                  <Link
+                    href={`/challenges/${result.challenge.challenge_id}`}
+                    className="rounded-lg border border-success/40 px-4 py-2 text-xs font-semibold text-success transition-colors hover:bg-success-bg"
+                  >
+                    Xem Challenge
+                  </Link>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+
+            {result?.type === 'revision' && (
+              <div className="mt-6 rounded-lg border border-warning/40 bg-warning-bg p-5">
+                <p className="text-sm font-semibold text-warning">Challenge cần được chỉnh sửa</p>
+                <p className="mt-2 text-sm leading-6 text-foreground-secondary">{result.summary}</p>
+                <div className="mt-4 space-y-3">
+                  {result.issues.map((issue, index) => (
+                    <div
+                      key={`${issue.category}-${index}`}
+                      className="rounded-lg border border-warning/25 bg-background p-4"
+                    >
+                      <p className="text-xs font-semibold uppercase tracking-wide text-warning">
+                        {categoryLabels[issue.category] ?? issue.category}
+                      </p>
+                      <p className="mt-2 text-sm leading-6 text-foreground">{issue.message}</p>
+                      <div className="mt-3 rounded-md bg-warning-bg px-3 py-2.5">
+                        <p className="text-xs font-semibold text-warning">Gợi ý chỉnh sửa</p>
+                        <p className="mt-1 text-xs leading-5 text-foreground-secondary">
+                          {issue.suggestion}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-4 text-xs text-foreground-secondary">
+                  Toàn bộ nội dung đã được giữ nguyên. Hãy chỉnh sửa form rồi kiểm tra lại.
+                </p>
+              </div>
+            )}
+
+            {result?.type === 'service-error' && (
+              <div role="alert" className="mt-6 rounded-lg border border-error/35 bg-error-bg p-5">
+                <p className="text-sm font-semibold text-error">Chưa thể kiểm tra Challenge</p>
+                <p className="mt-2 text-sm leading-6 text-foreground-secondary">
+                  Hệ thống kiểm duyệt đang tạm thời gián đoạn. Challenge chưa được tạo và toàn bộ
+                  nội dung của bạn vẫn được giữ nguyên. Vui lòng thử lại sau.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -38,7 +38,7 @@ export const challengeAPI = {
     unwrap<ChallengeSummary[]>(apiClient.get('/challenges', { params })),
   getById: (challengeId: string) => unwrap<Challenge>(apiClient.get(`/challenges/${challengeId}`)),
   create: (payload: CreateChallengeRequest) =>
-    unwrap<Challenge>(apiClient.post('/challenges', payload)),
+    unwrap<Challenge>(apiClient.post('/challenges', payload, { timeout: 25_000 })),
   updateStatus: (challengeId: string, payload: UpdateChallengeStatusRequest) =>
     unwrap<Pick<Challenge, 'challenge_id' | 'status' | 'updated_at'>>(
       apiClient.patch(`/challenges/${challengeId}/status`, payload)
