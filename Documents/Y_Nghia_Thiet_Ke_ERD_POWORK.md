@@ -52,6 +52,7 @@ Quản lý toàn bộ kho dữ liệu tĩnh liên quan đến đề bài do nhà
 - **Bảng `Evaluation_Results`:**
   - Lưu trữ điểm số chi tiết do giám khảo chấm dựa trên từng dòng tiêu chí (`criteria_id`).
   - Kết nối trực tiếp với `Submissions` qua khóa ngoại `submission_id`.
+  - Cặp `(submission_id, criteria_id)` là duy nhất: một Submission không thể có nhiều kết quả chấm hiệu lực cho cùng tiêu chí.
 - **Ranh giới cô lập:** **CẤM TUYỆT ĐỐI các câu lệnh JOIN** giữa bảng `Submissions`/`Evaluation_Results` sang bảng `Users` ở tầng cơ sở dữ liệu. Giám khảo và hệ thống giám sát chỉ được phép nhìn thấy mã `hash_id` ngẫu nhiên.
 
 ### 2.4 Profile Module (Hồ sơ năng lực động)
@@ -61,6 +62,7 @@ Xây dựng và hiển thị biểu đồ radar năng lực thực chiến công
 - **Bảng `Verified_Evidences`:**
   - Lưu trữ bằng chứng thực chiến của ứng viên sau khi đã vượt qua khâu đánh giá.
   - Bảng này lưu `user_id` để biết hồ sơ thuộc về ai. Tuy nhiên, nó áp dụng chiến lược **Snapshot Data**: copy trực tiếp chuỗi văn bản tĩnh như `challenge_name`, `company_name`, và `industry` tại thời điểm mở khóa để lưu trữ. Điều này phục vụ việc vẽ biểu đồ radar năng lực đa ngành.
+  - `source_hash_id` là khóa nguồn duy nhất của snapshot mới. Dữ liệu cũ được phép để `null`; mỗi anonymous identity chỉ có thể tạo một snapshot, kể cả khi hai request unlock chạy đồng thời.
 - **Ranh giới cô lập:** Profile Module không JOIN ngược về Challenge Module hay IAM Module để lấy tên bài toán hay tên công ty. Việc lưu trữ Snapshot giúp Profile Module hoàn toàn độc lập, đảm bảo tốc độ truy vấn hiển thị cực kỳ nhanh, đồng thời bảo vệ dữ liệu hồ sơ vĩnh viễn kể cả khi bài Challenge gốc bị doanh nghiệp xóa hoặc sửa đổi.
 
 ### 2.5 Talent Pool Module (Lưu trữ ứng viên)
