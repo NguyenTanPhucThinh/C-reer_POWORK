@@ -37,6 +37,7 @@ test('foreign submission ID cannot create evaluations or change status', async (
       findUnique: async () => ({
         id: 'submission-b',
         challengeId: foreignChallenge.id,
+        fileStatus: 'SAFE',
         identityMapping: { isUnlocked: false },
       }),
       update: async () => writes.push('submission.update'),
@@ -67,6 +68,7 @@ test('criteria ID from another challenge cannot create partial evaluation data',
       findUnique: async () => ({
         id: 'submission-a',
         challengeId: ownChallenge.id,
+        fileStatus: 'SAFE',
         identityMapping: { isUnlocked: false },
       }),
       update: async () => writes.push('submission.update'),
@@ -96,6 +98,7 @@ test('foreign submission ID cannot be rejected', async () => {
       findUnique: async () => ({
         id: 'submission-b',
         challengeId: foreignChallenge.id,
+        fileStatus: 'SAFE',
         identityMapping: { isUnlocked: false },
       }),
       update: async () => writes.push('submission.update'),
@@ -115,6 +118,7 @@ test('foreign submission ID cannot approve, unlock, or create evidence', async (
       findUnique: async () => ({
         id: 'submission-b',
         challengeId: foreignChallenge.id,
+        fileStatus: 'SAFE',
         identityMapping: {
           hashId: 'Candidate_B',
           userId: 'candidate-b',
