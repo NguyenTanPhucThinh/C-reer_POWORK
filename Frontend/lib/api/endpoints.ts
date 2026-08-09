@@ -79,6 +79,10 @@ export const profileAPI = {
 // Talent Pool Module — /api/v1/talent-pool
 export const talentPoolAPI = {
   list: () => unwrap<TalentPoolEntry[]>(apiClient.get('/talent-pool')),
-  add: (payload: AddToTalentPoolRequest) =>
-    unwrap<{ message: string }>(apiClient.post('/talent-pool', payload)),
+  add: async (payload: AddToTalentPoolRequest): Promise<void> => {
+    await unwrap<null>(apiClient.post('/talent-pool', payload));
+  },
+  updateStatus: async (poolId: string, status: TalentPoolEntry['status']): Promise<void> => {
+    await unwrap<null>(apiClient.patch(`/talent-pool/${poolId}/status`, { status }));
+  },
 };
