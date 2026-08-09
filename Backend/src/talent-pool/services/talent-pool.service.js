@@ -7,6 +7,7 @@
  *
  * Cách gọi chéo đúng chuẩn:
  *   talent-pool.service.js
+ *     → assessment/services/unlock-lookup.service.js (xác minh công ty đã unlock)
  *     → iam/services/user-lookup.service.js       (lấy fullName)
  *     → profile/services/evidence-lookup.service.js (lấy highest_score, challenges_taken)
  */
@@ -14,22 +15,35 @@ import prisma from '../../shared/config/prisma.js'
 import { AppError } from '../../shared/utils/AppError.js'
 import * as userLookupService from '../../iam/services/user-lookup.service.js'
 import * as evidenceLookupService from '../../profile/services/evidence-lookup.service.js'
+import * as unlockLookupService from '../../assessment/services/unlock-lookup.service.js'
 
 // ─── POST /api/v1/talent-pool ─────────────────────────────────────────────────
 // companyId lấy từ JWT (token Employer), không nhận từ FE
-export const addToTalentPool = async ({ companyId, userId }) => {
-  // Kiểm tra ứng viên có tồn tại không — qua IAM Interface
-  await userLookupService.getUserById(userId)
+export const addToTalentPool = async (
+  { companyId, userId },
+  {
+    database = prisma,
+    getUserById = userLookupService.getUserById,
+    hasCompanyUnlockedCandidate = unlockLookupService.hasCompanyUnlockedCandidate,
+  } = {},
+) => {
+  const wasUnlockedByCompany = await hasCompanyUnlockedCandidate({ companyId, userId }, database)
+  if (!wasUnlockedByCompany) {
+    throw new AppError('Candidate chưa được công ty của bạn unlock.', 403, 'POOL_007')
+  }
+
+  // Kiểm tra ứng viên vẫn tồn tại — qua IAM Interface
+  await getUserById(userId)
 
   // Kiểm tra đã có trong pool chưa — tránh trùng lặp
-  const existing = await prisma.talentPool.findUnique({
+  const existing = await database.talentPool.findUnique({
     where: { companyId_userId: { companyId, userId } },
   })
   if (existing) {
     throw new AppError('Ứng viên này đã có trong Talent Pool', 409, 'POOL_002')
   }
 
-  await prisma.talentPool.create({
+  await database.talentPool.create({
     data: { companyId, userId, status: 'IN_POOL' },
   })
 

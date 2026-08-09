@@ -79,7 +79,7 @@ export const submitSolution = async ({ userId, challengeId, solutionUrl, challen
   // 5. Gửi email xác nhận — KHÔNG await trong luồng chính (fire-and-forget),
   //    lấy email qua IAM Interface, không lộ ra response cho FE
   userLookupService
-    .getUserContactById(userId)
+    .getUserById(userId)
     .then(({ email }) =>
       sendSubmissionConfirmationEmail({
         toEmail: email,
@@ -158,8 +158,13 @@ export const rejectSubmission = async (submissionId, companyId, database = prism
 }
 
 // ─── POST /api/v1/assessment/submissions/:submission_id/unlock ──────────────
-export const unlockCandidate = async (submissionId, companyId, database = prisma) => {
-  const mappingResult = await database.$transaction(async (tx) => {
+export const unlockCandidate = async (
+  submissionId,
+  companyId,
+  database = prisma,
+  getUserById = userLookupService.getUserById,
+) => {
+  const unlockResult = await database.$transaction(async (tx) => {
     // Bước 1: Lấy bài nộp, kèm theo bảng IdentityMapping (để lấy cờ isUnlocked)
     // và bảng Điểm (EvaluationResult) kèm tiêu chí (Criteria) để chuẩn bị copy dữ liệu
     const submission = await tx.submission.findUnique({
@@ -231,19 +236,17 @@ export const unlockCandidate = async (submissionId, companyId, database = prisma
       },
     })
 
-    // Transaction thành công, trả về mapping để dùng ở bước dưới
-    return mapping
+    // Lookup cũng phải thành công trước khi commit để API không báo lỗi sau khi DB đã unlock.
+    const { email, full_name: fullName } = await getUserById(mapping.userId)
+    return { mapping, email, fullName }
   })
-
-  // Lấy thông tin thật qua IAM Interface
-  const { email, fullName } = await userLookupService.getUserContactById(mappingResult.userId)
 
   return {
     message: 'Identity unlocked successfully.',
     unlockedCandidateProfile: {
-      userId: mappingResult.userId,
-      fullName,
-      email,
+      userId: unlockResult.mapping.userId,
+      fullName: unlockResult.fullName,
+      email: unlockResult.email,
     },
   }
 }
