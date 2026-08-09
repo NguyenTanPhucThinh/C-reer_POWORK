@@ -8,6 +8,17 @@ import {
 } from '../controllers/submission.controller.js'
 import { getPresignedUrl } from '../controllers/upload.controller.js'
 import {
+  createVerificationQuestions,
+  createVerificationEvent,
+  completeCandidateVerification,
+  createVerificationRecordingUploadUrl,
+  getEmployerVerificationDashboard,
+  getEmployerVerificationRecording,
+  getEmployerVerificationSummary,
+  resumeVerification,
+  startVerification,
+} from '../controllers/verification.controller.js'
+import {
   authenticate,
   authorize,
   blindAuditionGuard,
@@ -16,6 +27,9 @@ import { validateBody, validateQuery } from '../../shared/middlewares/validate.m
 import {
   presignedUrlQuerySchema,
   createSubmissionSchema,
+  startVerificationSchema,
+  verificationEventSchema,
+  completeVerificationSchema,
   evaluateSubmissionSchema,
   unlockSubmissionSchema,
 } from '../models/submission.schema.js'
@@ -39,6 +53,72 @@ router.post(
   blindAuditionGuard,
   validateBody(createSubmissionSchema),
   submitSolution,
+)
+
+router.post(
+  '/submissions/:submission_id/verification/start',
+  authenticate,
+  authorize('CANDIDATE'),
+  validateBody(startVerificationSchema),
+  startVerification,
+)
+
+router.get(
+  '/verifications/:verification_id',
+  authenticate,
+  authorize('CANDIDATE'),
+  resumeVerification,
+)
+
+router.post(
+  '/verifications/:verification_id/questions',
+  authenticate,
+  authorize('CANDIDATE'),
+  createVerificationQuestions,
+)
+
+router.post(
+  '/verifications/:verification_id/events',
+  authenticate,
+  authorize('CANDIDATE'),
+  validateBody(verificationEventSchema),
+  createVerificationEvent,
+)
+
+router.post(
+  '/verifications/:verification_id/recording-upload',
+  authenticate,
+  authorize('CANDIDATE'),
+  createVerificationRecordingUploadUrl,
+)
+
+router.post(
+  '/verifications/:verification_id/complete',
+  authenticate,
+  authorize('CANDIDATE'),
+  validateBody(completeVerificationSchema),
+  completeCandidateVerification,
+)
+
+router.get(
+  '/submissions/:submission_id/verification-summary',
+  authenticate,
+  authorize('EMPLOYER'),
+  getEmployerVerificationSummary,
+)
+
+router.get(
+  '/submissions/:submission_id/verification-dashboard',
+  authenticate,
+  authorize('EMPLOYER'),
+  getEmployerVerificationDashboard,
+)
+
+router.get(
+  '/submissions/:submission_id/verification-recording',
+  authenticate,
+  authorize('EMPLOYER'),
+  getEmployerVerificationRecording,
 )
 
 // Employer xem danh sách bài nộp — group theo hash_id, nhiều version

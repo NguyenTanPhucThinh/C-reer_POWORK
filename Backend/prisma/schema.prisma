@@ -16,14 +16,14 @@ datasource db {
 // ══════════════════════════════════════════════════════
 
 model User {
-  id           String    @id @default(uuid()) @map("user_id")
-  email        String    @unique
-  passwordHash String?   @map("password_hash")  // nullable — Google user không có password
-  fullName     String    @map("full_name")
+  id           String   @id @default(uuid()) @map("user_id")
+  email        String   @unique
+  passwordHash String?  @map("password_hash") // nullable — Google user không có password
+  fullName     String   @map("full_name")
   role         UserRole
-  googleId     String?   @unique @map("google_id")  // null nếu đăng ký bằng email/password
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
+  googleId     String?  @unique @map("google_id") // null nếu đăng ký bằng email/password
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   company Company?
 
@@ -32,7 +32,7 @@ model User {
 
 model Company {
   id          String  @id @default(uuid()) @map("company_id")
-  userId      String  @unique @map("user_id")   // FK nội bộ trong IAM Module
+  userId      String  @unique @map("user_id") // FK nội bộ trong IAM Module
   companyName String  @map("company_name")
   industry    String?
   website     String?
@@ -48,11 +48,11 @@ model Company {
 
 model Challenge {
   id          String          @id @default(uuid()) @map("challenge_id")
-  companyId   String          @map("company_id")   // Lưu như data field, không FK xuyên module
+  companyId   String          @map("company_id") // Lưu như data field, không FK xuyên module
   companyName String          @map("company_name") // SNAPSHOT — tránh JOIN sang IAM
   title       String
   description String
-  industry    String          // Phân loại đa ngành: IT, Thiết kế, Marketing...
+  industry    String // Phân loại đa ngành: IT, Thiết kế, Marketing...
   deadline    DateTime
   status      ChallengeStatus @default(OPEN)
   createdAt   DateTime        @default(now()) @map("created_at")
@@ -68,7 +68,7 @@ model RubricCriteria {
   id           String @id @default(uuid()) @map("criteria_id")
   challengeId  String @map("challenge_id")
   criteriaName String @map("criteria_name")
-  weight       Int    // Tổng weight của 1 challenge = 100
+  weight       Int // Tổng weight của 1 challenge = 100
   maxScore     Float  @map("max_score")
 
   challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
@@ -87,8 +87,8 @@ model RubricCriteria {
 // KHÔNG expose ra bất kỳ API response nào
 model IdentityMapping {
   id          String   @id @default(uuid())
-  hashId      String   @unique @map("hash_id")    // "Candidate_9F7A64D4297F45FA1E63B6A027AECE85"
-  userId      String   @map("user_id")            // user_id thật — KHÔNG JOIN ra ngoài
+  hashId      String   @unique @map("hash_id") // "Candidate_9F7A64D4297F45FA1E63B6A027AECE85"
+  userId      String   @map("user_id") // user_id thật — KHÔNG JOIN ra ngoài
   challengeId String   @map("challenge_id")
   isUnlocked  Boolean  @default(false) @map("is_unlocked")
   createdAt   DateTime @default(now()) @map("created_at")
@@ -103,7 +103,7 @@ model IdentityMapping {
 // TUYỆT ĐỐI KHÔNG có cột user_id
 model Submission {
   id             String           @id @default(uuid()) @map("submission_id")
-  challengeId    String           @map("challenge_id")  // Lưu như data field
+  challengeId    String           @map("challenge_id") // Lưu như data field
   hashId         String           @map("hash_id")
   version        Int              @default(1)
   solutionUrl    String           @map("solution_url")
@@ -113,11 +113,53 @@ model Submission {
   submittedAt    DateTime         @default(now()) @map("submitted_at")
 
   // Nối về bảng kín qua hash_id — không trực tiếp có user_id
-  identityMapping IdentityMapping @relation(fields: [hashId], references: [hashId])
+  identityMapping   IdentityMapping         @relation(fields: [hashId], references: [hashId])
   evaluationResults EvaluationResult[]
+  verification      SubmissionVerification?
 
   @@unique([hashId, version])
   @@map("submissions")
+}
+
+// Bằng chứng Camera và câu trả lời sau khi nộp bài — không lưu danh tính thật
+model SubmissionVerification {
+  id               String             @id @default(uuid()) @map("verification_id")
+  submissionId     String             @unique @map("submission_id")
+  status           VerificationStatus @default(PENDING_CAMERA)
+  verificationCode String             @map("verification_code")
+
+  selectedOralDurationSeconds Int  @map("selected_oral_duration_seconds")
+  actualOralDurationSeconds   Int? @map("actual_oral_duration_seconds")
+
+  questions Json?
+  answers   Json?
+
+  recordingObjectKey String? @unique @map("recording_object_key")
+  recordingMimeType  String? @map("recording_mime_type")
+  recordingSize      Int?    @map("recording_size")
+
+  oralStartedAt        DateTime? @map("oral_started_at")
+  oralCompletedAt      DateTime? @map("oral_completed_at")
+  answeringStartedAt   DateTime? @map("answering_started_at")
+  answeringCompletedAt DateTime? @map("answering_completed_at")
+  expiresAt            DateTime  @map("expires_at")
+  completedAt          DateTime? @map("completed_at")
+
+  cameraInterruptionCount           Int       @default(0) @map("camera_interruption_count")
+  cameraInterruptionDurationSeconds Int       @default(0) @map("camera_interruption_duration_seconds")
+  cameraInterruptedAt               DateTime? @map("camera_interrupted_at")
+  focusLossCount                    Int       @default(0) @map("focus_loss_count")
+  pasteBlockedCount                 Int       @default(0) @map("paste_blocked_count")
+  selectAllBlockedCount             Int       @default(0) @map("select_all_blocked_count")
+  copyBlockedCount                  Int       @default(0) @map("copy_blocked_count")
+  dropBlockedCount                  Int       @default(0) @map("drop_blocked_count")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@map("submission_verifications")
 }
 
 // Điểm từng tiêu chí — kết nối với Submissions, KHÔNG biết user_id
@@ -145,11 +187,11 @@ model EvaluationResult {
 // kể cả khi Challenge gốc bị xóa
 model VerifiedEvidence {
   id            String   @id @default(uuid()) @map("evidence_id")
-  userId        String   @map("user_id")          // Lưu như data field
+  userId        String   @map("user_id") // Lưu như data field
   sourceHashId  String?  @unique @map("source_hash_id") // Khóa nguồn snapshot; null cho dữ liệu cũ
-  challengeName String   @map("challenge_name")   // SNAPSHOT từ Challenge
-  companyName   String   @map("company_name")     // SNAPSHOT từ Company
-  industry      String                            // SNAPSHOT — dùng vẽ radar chart
+  challengeName String   @map("challenge_name") // SNAPSHOT từ Challenge
+  companyName   String   @map("company_name") // SNAPSHOT từ Company
+  industry      String // SNAPSHOT — dùng vẽ radar chart
   totalScore    Float    @map("total_score")
   unlockedAt    DateTime @default(now()) @map("unlocked_at")
 
@@ -186,6 +228,19 @@ enum FileScanStatus {
   SCAN_FAILED
 }
 
+enum VerificationStatus {
+  PENDING_CAMERA
+  CAMERA_ACTIVE
+  GENERATING_QUESTIONS
+  ANSWERING
+  PENDING_UPLOAD
+  PENDING_SCAN
+  READY
+  REJECTED
+  SCAN_FAILED
+  EXPIRED
+}
+
 // ══════════════════════════════════════════════════════
 // TALENT POOL MODULE — Lưu trữ ứng viên tiềm năng
 // ══════════════════════════════════════════════════════
@@ -194,14 +249,14 @@ enum FileScanStatus {
 // company_id và user_id lưu dạng DATA FIELD — không FK cứng sang IAM Module
 // Tuân thủ Loosely Coupling: không ràng buộc FK xuyên domain
 model TalentPool {
-  id          String          @id @default(uuid()) @map("pool_id")
-  companyId   String          @map("company_id")   // Data field — không FK sang companies
-  userId      String          @map("user_id")       // Data field — không FK sang users
-  status      TalentPoolStatus @default(IN_POOL)
-  addedAt     DateTime        @default(now()) @map("added_at")
-  updatedAt   DateTime        @updatedAt @map("updated_at")
+  id        String           @id @default(uuid()) @map("pool_id")
+  companyId String           @map("company_id") // Data field — không FK sang companies
+  userId    String           @map("user_id") // Data field — không FK sang users
+  status    TalentPoolStatus @default(IN_POOL)
+  addedAt   DateTime         @default(now()) @map("added_at")
+  updatedAt DateTime         @updatedAt @map("updated_at")
 
-  @@unique([companyId, userId])   // Mỗi cặp company+candidate chỉ xuất hiện 1 lần
+  @@unique([companyId, userId]) // Mỗi cặp company+candidate chỉ xuất hiện 1 lần
   @@map("talent_pools")
 }
 
