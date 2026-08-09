@@ -160,7 +160,10 @@ export function useVerificationRecorder() {
         if (recorder.state !== 'inactive') recorder.stop();
       };
 
+      const permissionRevokedMessage =
+        'Quyền camera hoặc microphone đã bị thu hồi hoặc thiết bị bị ngắt. Hãy cấp lại quyền trong trình duyệt rồi bấm Thử ghi hình lại.';
       const videoTrack = stream.getVideoTracks()[0];
+      const audioTrack = stream.getAudioTracks()[0];
       videoTrack.onmute = () => {
         if (statusRef.current !== 'recording') return;
         cameraInterrupted = true;
@@ -175,8 +178,9 @@ export function useVerificationRecorder() {
       };
       videoTrack.onended = () => {
         if (!cameraInterrupted) callbacks.onCameraInterrupted();
-        failRecording('Camera đã bị ngắt trong lúc ghi hình.');
+        failRecording(permissionRevokedMessage);
       };
+      audioTrack.onended = () => failRecording(permissionRevokedMessage);
 
       recorder.ondataavailable = (event) => {
         if (event.data.size > 0) chunks.push(event.data);
@@ -200,6 +204,7 @@ export function useVerificationRecorder() {
         videoTrack.onended = null;
         videoTrack.onmute = null;
         videoTrack.onunmute = null;
+        audioTrack.onended = null;
         recorderRef.current = null;
         const blob = new Blob(chunks, { type: VERIFICATION_RECORDING_MIME_TYPE });
         stopTracks();

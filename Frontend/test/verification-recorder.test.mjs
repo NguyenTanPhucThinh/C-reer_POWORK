@@ -21,6 +21,9 @@ test('Verification recorder fails unsupported browsers early and records bounded
   assert.match(hook, /recorder\.onstart = \(\) => \{[\s\S]*updateStatus\('recording'\)/);
   assert.match(hook, /blob\.size > VERIFICATION_MAX_FILE_BYTES/);
   assert.match(hook, /track\.onended/);
+  assert.match(hook, /Quyền camera hoặc microphone đã bị thu hồi/);
+  assert.match(hook, /cấp lại quyền trong trình duyệt/);
+  assert.match(hook, /audioTrack\.onended/);
   assert.match(hook, /track\.stop\(\)/);
   assert.match(hook, /\(\) => \(\) => \{/);
   assert.match(env, /NEXT_PUBLIC_MAX_FILE_SIZE_MB=10/);

@@ -35,6 +35,17 @@ type VerificationPhase =
   | 'FAILED';
 
 type RetryAction = 'START' | 'RESUME' | null;
+type EvidenceRecoveryKind =
+  | 'NETWORK'
+  | 'PRESIGNED_EXPIRED'
+  | 'FILE_TOO_LARGE'
+  | 'UPLOAD'
+  | 'COMPLETE';
+
+interface EvidenceRecovery {
+  kind: EvidenceRecoveryKind;
+  message: string;
+}
 
 interface VerificationState {
   phase: VerificationPhase;
@@ -52,7 +63,7 @@ interface VerificationState {
   recordingObjectKey: string | null;
   uploadProgress: number;
   evidenceUploaded: boolean;
-  uploadError: string | null;
+  uploadError: EvidenceRecovery | null;
 }
 
 type VerificationAction =
@@ -80,9 +91,10 @@ type VerificationAction =
   | { type: 'UPLOAD_PROGRESS'; progress: number }
   | { type: 'UPLOAD_SUCCEEDED' }
   | { type: 'COMPLETE_STARTED' }
-  | { type: 'EVIDENCE_FAILED'; message: string }
+  | { type: 'EVIDENCE_FAILED'; error: EvidenceRecovery }
   | { type: 'SCAN_STARTED'; session: VerificationSession }
   | { type: 'SCAN_POLL_ERROR'; message: string }
+  | { type: 'SCAN_POLL_RECOVERED' }
   | {
       type: 'FAIL';
       error: VerificationState['error'];
@@ -238,7 +250,7 @@ function verificationReducer(
     case 'COMPLETE_STARTED':
       return { ...state, phase: 'COMPLETING', uploadError: null };
     case 'EVIDENCE_FAILED':
-      return { ...state, phase: 'PREPARING_UPLOAD', uploadError: action.message };
+      return { ...state, phase: 'PREPARING_UPLOAD', uploadError: action.error };
     case 'SCAN_STARTED':
       return {
         ...state,
@@ -247,7 +259,12 @@ function verificationReducer(
         uploadError: null,
       };
     case 'SCAN_POLL_ERROR':
-      return { ...state, uploadError: action.message };
+      return {
+        ...state,
+        uploadError: { kind: 'NETWORK', message: action.message },
+      };
+    case 'SCAN_POLL_RECOVERED':
+      return { ...state, uploadError: null };
     case 'FAIL':
       return {
         ...state,
@@ -383,12 +400,51 @@ function uploadRecordingBlob(
     };
     request.onload = () => {
       if (request.status >= 200 && request.status < 300) resolve();
-      else reject(new Error(`MinIO từ chối upload với HTTP ${request.status}.`));
+      else if (request.status === 401 || request.status === 403) {
+        reject(
+          new DOMException(
+            'URL upload đã hết hạn hoặc không còn hợp lệ. Video vẫn được giữ để xin URL mới.',
+            'PresignedUrlExpiredError'
+          )
+        );
+      } else reject(new Error(`MinIO từ chối upload với HTTP ${request.status}.`));
     };
-    request.onerror = () => reject(new Error('Mất kết nối trong khi tải video lên MinIO.'));
+    request.onerror = () =>
+      reject(
+        new DOMException(
+          'Mất kết nối trong khi tải video. Video và câu trả lời vẫn được giữ trong tab này.',
+          'NetworkError'
+        )
+      );
     request.onabort = () => reject(new Error('Quá trình tải video đã bị gián đoạn.'));
     request.send(blob);
   });
+}
+
+function describeEvidenceError(error: unknown, stage: 'UPLOAD' | 'COMPLETE'): EvidenceRecovery {
+  if (error instanceof DOMException && error.name === 'PresignedUrlExpiredError') {
+    return { kind: 'PRESIGNED_EXPIRED', message: error.message };
+  }
+  if (error instanceof DOMException && error.name === 'FileTooLargeError') {
+    return { kind: 'FILE_TOO_LARGE', message: error.message };
+  }
+  if (
+    (error instanceof DOMException && error.name === 'NetworkError') ||
+    (axios.isAxiosError(error) && !error.response)
+  ) {
+    return {
+      kind: 'NETWORK',
+      message: 'Không thể kết nối hệ thống. Video và câu trả lời vẫn được giữ trong tab này.',
+    };
+  }
+  return {
+    kind: stage,
+    message: axios.isAxiosError(error)
+      ? describeError(error).message
+      : error instanceof Error
+        ? error.message
+        : 'Không thể hoàn tất xác thực. Dữ liệu trong tab này vẫn được giữ nguyên.',
+  };
 }
 
 function isAlreadyCompletedError(error: unknown): boolean {
@@ -753,6 +809,7 @@ export default function CandidateVerificationPage() {
       return length < question.minimumLength || length > question.maximumLength;
     });
     const blob = recorder.recordingBlob;
+    let stage: 'UPLOAD' | 'COMPLETE' = state.evidenceUploaded ? 'COMPLETE' : 'UPLOAD';
 
     try {
       if (state.questions.length === 0 || invalidAnswer) {
@@ -766,7 +823,10 @@ export default function CandidateVerificationPage() {
         throw new Error('Video ghi hình không đúng định dạng WebM.');
       }
       if (blob.size > VERIFICATION_MAX_FILE_BYTES) {
-        throw new Error('Video vượt quá giới hạn dung lượng cho phép.');
+        throw new DOMException(
+          `Video vượt quá giới hạn ${formatFileSize(VERIFICATION_MAX_FILE_BYTES)} nên chưa được upload.`,
+          'FileTooLargeError'
+        );
       }
 
       let objectKey = state.recordingObjectKey;
@@ -789,6 +849,7 @@ export default function CandidateVerificationPage() {
       }
 
       if (!objectKey) throw new Error('Không tìm thấy object key của video xác thực.');
+      stage = 'COMPLETE';
       dispatch({ type: 'COMPLETE_STARTED' });
       try {
         await completeEvidenceOnce(state.session.verificationId, {
@@ -809,12 +870,7 @@ export default function CandidateVerificationPage() {
         dispatch({ type: 'SYNC_SESSION', session: currentSession });
       }
     } catch (error) {
-      const message = axios.isAxiosError(error)
-        ? describeError(error).message
-        : error instanceof Error
-          ? error.message
-          : 'Không thể hoàn tất xác thực. Vui lòng thử lại.';
-      dispatch({ type: 'EVIDENCE_FAILED', message });
+      dispatch({ type: 'EVIDENCE_FAILED', error: describeEvidenceError(error, stage) });
     } finally {
       evidenceSubmissionLock.current = false;
     }
@@ -841,6 +897,7 @@ export default function CandidateVerificationPage() {
         const session = await assessmentAPI.getVerificationStatus(verificationId);
         if (cancelled) return;
         if (session.status === 'PendingScan') {
+          dispatch({ type: 'SCAN_POLL_RECOVERED' });
           timer = window.setTimeout(poll, 1500);
         } else {
           dispatch({ type: 'SYNC_SESSION', session });
@@ -1308,11 +1365,11 @@ function EvidenceUploadPanel({
 }: {
   phase: VerificationPhase;
   progress: number;
-  error: string | null;
+  error: EvidenceRecovery | null;
   uploaded: boolean;
   onRetry: () => void;
 }) {
-  const title =
+  const activeTitle =
     phase === 'UPLOADING'
       ? 'Đang tải video xác thực'
       : phase === 'COMPLETING'
@@ -1322,6 +1379,30 @@ function EvidenceUploadPanel({
           : uploaded
             ? 'Chưa thể hoàn tất xác thực'
             : 'Đang chuẩn bị upload';
+  const recovery = error
+    ? {
+        NETWORK: {
+          title: 'Mất kết nối trong khi hoàn tất',
+          action: 'Thử lại khi có kết nối',
+        },
+        PRESIGNED_EXPIRED: {
+          title: 'URL upload đã hết hạn',
+          action: 'Xin URL mới và thử lại',
+        },
+        FILE_TOO_LARGE: {
+          title: 'Video vượt quá giới hạn dung lượng',
+          action: null,
+        },
+        UPLOAD: {
+          title: 'Video chưa được upload thành công',
+          action: 'Thử upload lại',
+        },
+        COMPLETE: {
+          title: 'Backend chưa xác nhận hoàn tất',
+          action: 'Thử xác nhận lại',
+        },
+      }[error.kind]
+    : null;
 
   return (
     <section
@@ -1329,7 +1410,7 @@ function EvidenceUploadPanel({
       aria-live="polite"
     >
       <p className="text-xs font-semibold uppercase tracking-wider text-accent">Hoàn tất phiên</p>
-      <h2 className="mt-2 text-2xl font-semibold">{title}</h2>
+      <h2 className="mt-2 text-2xl font-semibold">{recovery?.title ?? activeTitle}</h2>
       <p className="mt-2 text-sm leading-6 text-foreground-secondary">
         {phase === 'SCANNING'
           ? 'Backend đã nhận video và câu trả lời. Vui lòng chờ kết quả kiểm tra an toàn.'
@@ -1363,13 +1444,13 @@ function EvidenceUploadPanel({
           className="mt-5 rounded-lg border border-warning bg-warning-bg p-4 text-sm text-warning"
           role="alert"
         >
-          {error}
+          {error.message}
         </div>
       )}
 
-      {phase === 'PREPARING_UPLOAD' && error && (
+      {phase === 'PREPARING_UPLOAD' && recovery?.action && (
         <Button type="button" variant="primary" className="mt-5" onClick={onRetry}>
-          {uploaded ? 'Thử hoàn tất lại' : 'Thử upload lại'}
+          {recovery.action}
         </Button>
       )}
     </section>
