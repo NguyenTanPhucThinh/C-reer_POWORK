@@ -28,17 +28,37 @@ export const getLatestVersion = async (hashId) => {
 }
 
 // Tạo Submission mới với version đã tính — KHÔNG có cột user_id
-export const createSubmission = ({ challengeId, hashId, version, solutionUrl }) => {
-  return prisma.submission.create({
+export const createSubmission = (
+  { challengeId, hashId, version, solutionUrl, fileStatus = 'AWAITING_UPLOAD' },
+  database = prisma,
+) => {
+  return database.submission.create({
     data: {
       challengeId,
       hashId,
       version,
       solutionUrl,
       status: 'PENDING',
+      fileStatus,
     },
   })
 }
+
+export const findAwaitingUpload = ({ userId, challengeId, solutionUrl }, database = prisma) =>
+  database.submission.findFirst({
+    where: {
+      challengeId,
+      solutionUrl,
+      fileStatus: 'AWAITING_UPLOAD',
+      identityMapping: { userId },
+    },
+  })
+
+export const markPendingScan = (submissionId, database = prisma) =>
+  database.submission.update({
+    where: { id: submissionId },
+    data: { fileStatus: 'PENDING_SCAN', submittedAt: new Date() },
+  })
 
 // Employer xem danh sách bài nộp — group theo hash_id, mỗi hash_id có nhiều version
 export const findSubmissionsByChallengeGroupedByHash = async (challengeId, database = prisma) => {
@@ -48,11 +68,13 @@ export const findSubmissionsByChallengeGroupedByHash = async (challengeId, datab
       hashId: true,
       isUnlocked: true,
       submissions: {
+        where: { fileStatus: 'SAFE' },
         orderBy: { version: 'desc' },
         select: {
           id: true,
           version: true,
           status: true,
+          fileStatus: true,
           solutionUrl: true,
           submittedAt: true,
         },
@@ -70,11 +92,25 @@ export const findSubmissionsByChallengeGroupedByHash = async (challengeId, datab
     }))
 }
 
-export const findSubmissionById = (submissionId) => {
-  return prisma.submission.findUnique({
+export const findSubmissionById = (submissionId, database = prisma) => {
+  return database.submission.findUnique({
     where: { id: submissionId },
   })
 }
+
+export const updateSubmissionScanResult = (
+  submissionId,
+  { fileStatus, status, generalComment },
+  database = prisma,
+) =>
+  database.submission.update({
+    where: { id: submissionId },
+    data: {
+      fileStatus,
+      ...(status ? { status } : {}),
+      ...(generalComment ? { generalComment } : {}),
+    },
+  })
 
 export const updateSubmissionStatus = (submissionId, status, generalComment) => {
   return prisma.submission.update({

@@ -14,10 +14,42 @@ import { generateHashId } from '../../shared/utils/hashId.js'
 import prisma from '../../shared/config/prisma.js'
 import * as submissionRepository from '../repositories/submission.repository.js'
 import * as userLookupService from '../../iam/services/user-lookup.service.js' // IAM Interface
-import { assertChallengeOwnership } from './ownership.service.js'
-import { isSubmissionObjectKey } from './upload.service.js'
+import { assertChallengeOwnership, assertSubmissionFileSafe } from './ownership.service.js'
+import {
+  assertSubmissionObjectExists,
+  generatePresignedUploadUrl,
+  isSubmissionObjectKey,
+} from './upload.service.js'
 import { queueScanJob } from '../jobs/scan.job.js'
 import { sendSubmissionConfirmationEmail } from './notification.service.js'
+
+export const prepareSubmissionUpload = async ({ userId, challengeId, filename }) => {
+  const challenge = await prisma.challenge.findUnique({ where: { id: challengeId } })
+  if (!challenge) throw new AppError('Không tìm thấy challenge tương ứng', 404, 'CHAL_004')
+
+  const mapping = await submissionRepository.findOrCreateIdentityMapping({
+    hashId: generateHashId(userId, challengeId),
+    userId,
+    challengeId,
+  })
+  const latestVersion = await submissionRepository.getLatestVersion(mapping.hashId)
+  const nextVersion = latestVersion + 1
+  const upload = await generatePresignedUploadUrl({ challengeId, filename })
+  const submission = await submissionRepository.createSubmission({
+    challengeId,
+    hashId: mapping.hashId,
+    version: nextVersion,
+    solutionUrl: upload.objectKey,
+  })
+
+  return {
+    ...upload,
+    submissionId: submission.id,
+    hashId: submission.hashId,
+    version: submission.version,
+    fileStatus: submission.fileStatus,
+  }
+}
 
 // ─── POST /api/v1/assessment/submissions ──────────────────────────────────────
 export const submitSolution = async ({ userId, challengeId, solutionUrl, challengeTitle }) => {
@@ -25,27 +57,23 @@ export const submitSolution = async ({ userId, challengeId, solutionUrl, challen
     throw new AppError('Object key của bài nộp không hợp lệ.', 400, 'ASSESS_008')
   }
 
-  // 1. Tìm hoặc tạo IdentityMapping — 1 cặp (user_id, challenge_id) chỉ có 1 hash_id duy nhất,
-  //    dù ứng viên nộp lại nhiều lần (version tăng, hash_id giữ nguyên)
-  const mapping = await submissionRepository.findOrCreateIdentityMapping({
-    hashId: generateHashId(userId, challengeId),
+  const awaitingUpload = await submissionRepository.findAwaitingUpload({
     userId,
     challengeId,
-  })
-
-  // 2. Tính version tiếp theo — tăng dần nếu ứng viên đã nộp trước đó (TC versioning)
-  const latestVersion = await submissionRepository.getLatestVersion(mapping.hashId)
-  const nextVersion = latestVersion + 1
-
-  // 3. Tạo Submission — KHÔNG có cột user_id, chỉ có hash_id
-  const submission = await submissionRepository.createSubmission({
-    challengeId,
-    hashId: mapping.hashId,
-    version: nextVersion,
     solutionUrl,
   })
+  if (!awaitingUpload) {
+    throw new AppError('Không tìm thấy lượt upload đang chờ xác nhận.', 409, 'ASSESS_010')
+  }
 
-  // 4. Đẩy Background Job quét virus — KHÔNG await, không block response
+  try {
+    await assertSubmissionObjectExists(solutionUrl)
+  } catch {
+    throw new AppError('File chưa được upload hoàn tất.', 409, 'ASSESS_010')
+  }
+
+  const submission = await submissionRepository.markPendingScan(awaitingUpload.id)
+
   queueScanJob(submission.id)
 
   // 5. Gửi email xác nhận — KHÔNG await trong luồng chính (fire-and-forget),
@@ -55,8 +83,8 @@ export const submitSolution = async ({ userId, challengeId, solutionUrl, challen
     .then(({ email }) =>
       sendSubmissionConfirmationEmail({
         toEmail: email,
-        hashId: mapping.hashId,
-        version: nextVersion,
+        hashId: submission.hashId,
+        version: submission.version,
         challengeTitle: challengeTitle ?? 'Challenge',
       }),
     )
@@ -70,6 +98,7 @@ export const submitSolution = async ({ userId, challengeId, solutionUrl, challen
     hashId: submission.hashId,
     version: submission.version,
     status: submission.status,
+    fileStatus: submission.fileStatus,
     submittedAt: submission.submittedAt.toISOString(),
   }
 }
@@ -89,6 +118,7 @@ export const getSubmissionsByChallenge = async (challengeId, companyId, database
       submissionId: s.id,
       version: s.version,
       status: s.status,
+      fileStatus: s.fileStatus,
       solutionUrl: s.solutionUrl,
       submittedAt: s.submittedAt.toISOString(),
     })),
@@ -106,6 +136,7 @@ export const rejectSubmission = async (submissionId, companyId, database = prism
 
     const challenge = await tx.challenge.findUnique({ where: { id: submission.challengeId } })
     assertChallengeOwnership(challenge, companyId)
+    assertSubmissionFileSafe(submission)
 
     if (!submission.identityMapping) {
       throw new AppError('Không tìm thấy identity mapping', 404, 'ASSESS_003')
@@ -147,6 +178,7 @@ export const unlockCandidate = async (submissionId, companyId, database = prisma
 
     const challenge = await tx.challenge.findUnique({ where: { id: submission.challengeId } })
     assertChallengeOwnership(challenge, companyId)
+    assertSubmissionFileSafe(submission)
 
     const mapping = submission.identityMapping
     if (!mapping) throw new AppError('Không tìm thấy identity mapping', 404, 'ASSESS_003')
