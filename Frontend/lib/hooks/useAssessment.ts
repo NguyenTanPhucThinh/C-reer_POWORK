@@ -6,8 +6,8 @@ import type { EvaluateRequest, UnlockRequest } from '@/lib/types';
 export function useGradingSubmission(submissionId: string, challengeId?: string | null) {
   return useQuery({
     queryKey: ['assessment', 'grading-submission', submissionId, challengeId ?? null],
-    queryFn: () => getGradingSubmission({ submissionId, challengeId }),
-    enabled: Boolean(submissionId),
+    queryFn: () => getGradingSubmission({ submissionId, challengeId: challengeId! }),
+    enabled: Boolean(submissionId && challengeId),
   });
 }
 

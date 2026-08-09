@@ -55,7 +55,6 @@ export interface GradingSubmission {
   documents: ReviewDocument[];
   is_unlocked?: boolean;
   unlocked_candidate_profile?: UnlockedCandidateProfile;
-  data_source?: 'api' | 'mock';
 }
 
 export interface EvaluationItemInput {

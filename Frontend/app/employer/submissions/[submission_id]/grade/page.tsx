@@ -446,11 +446,6 @@ function GradeSubmissionWorkspace({ submission }: { submission: GradingSubmissio
               <span className="rounded-pill border-hairline border-dashed border-border-secondary bg-background-tertiary px-3 py-1 text-2xs text-foreground-tertiary">
                 Ứng viên #{getAnonymousCode(submission.hash_id)}
               </span>
-              {submission.data_source === 'mock' && (
-                <span className="rounded-pill border-hairline border-border-secondary bg-background px-3 py-1 text-2xs text-foreground-tertiary">
-                  Demo fallback
-                </span>
-              )}
             </div>
             <h1 className="truncate text-lg font-semibold text-foreground">
               {submission.challenge_title}
