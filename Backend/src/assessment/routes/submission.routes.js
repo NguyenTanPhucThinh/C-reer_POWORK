@@ -7,6 +7,7 @@ import {
   unlockCandidate,
 } from '../controllers/submission.controller.js'
 import { getPresignedUrl } from '../controllers/upload.controller.js'
+import { resumeVerification, startVerification } from '../controllers/verification.controller.js'
 import {
   authenticate,
   authorize,
@@ -16,6 +17,7 @@ import { validateBody, validateQuery } from '../../shared/middlewares/validate.m
 import {
   presignedUrlQuerySchema,
   createSubmissionSchema,
+  startVerificationSchema,
   evaluateSubmissionSchema,
   unlockSubmissionSchema,
 } from '../models/submission.schema.js'
@@ -39,6 +41,21 @@ router.post(
   blindAuditionGuard,
   validateBody(createSubmissionSchema),
   submitSolution,
+)
+
+router.post(
+  '/submissions/:submission_id/verification/start',
+  authenticate,
+  authorize('CANDIDATE'),
+  validateBody(startVerificationSchema),
+  startVerification,
+)
+
+router.get(
+  '/verifications/:verification_id',
+  authenticate,
+  authorize('CANDIDATE'),
+  resumeVerification,
 )
 
 // Employer xem danh sách bài nộp — group theo hash_id, nhiều version

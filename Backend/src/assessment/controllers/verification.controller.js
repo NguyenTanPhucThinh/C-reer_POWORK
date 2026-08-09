@@ -1,0 +1,42 @@
+import { sendSuccess } from '../../shared/utils/response.js'
+import {
+  resumeCandidateVerification,
+  startCandidateVerification,
+} from '../services/verification.service.js'
+
+const verificationStatusToApi = {
+  PENDING_CAMERA: 'PendingCamera',
+  CAMERA_ACTIVE: 'CameraActive',
+  GENERATING_QUESTIONS: 'GeneratingQuestions',
+  ANSWERING: 'Answering',
+  PENDING_UPLOAD: 'PendingUpload',
+  PENDING_SCAN: 'PendingScan',
+  READY: 'Ready',
+  REJECTED: 'Rejected',
+  SCAN_FAILED: 'ScanFailed',
+  EXPIRED: 'Expired',
+}
+
+const sendSession = (res, session) =>
+  sendSuccess(res, {
+    verification_id: session.verificationId,
+    submission_id: session.submissionId,
+    verification_status: verificationStatusToApi[session.status],
+    verification_code: session.verificationCode,
+    oral_duration_seconds: session.oralDurationSeconds,
+    expires_at: session.expiresAt,
+  })
+
+export const startVerification = async (req, res) => {
+  const session = await startCandidateVerification({
+    submissionId: req.params.submission_id,
+    userId: req.user.userId,
+    oralDurationSeconds: req.body.oral_duration_seconds,
+  })
+  return sendSession(res, session)
+}
+
+export const resumeVerification = async (req, res) => {
+  const session = await resumeCandidateVerification(req.params.verification_id, req.user.userId)
+  return sendSession(res, session)
+}

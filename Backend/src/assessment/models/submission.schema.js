@@ -15,6 +15,13 @@ export const createSubmissionSchema = z.object({
   solution_url: z.string().min(1, 'solution_url (object_key) là bắt buộc'),
 })
 
+// POST /assessment/submissions/:submission_id/verification/start
+export const startVerificationSchema = z
+  .object({
+    oral_duration_seconds: z.union([z.literal(15), z.literal(30), z.literal(60), z.literal(120)]),
+  })
+  .strict()
+
 // POST /assessment/submissions/:submission_id/evaluate
 export const evaluateSubmissionSchema = z.object({
   evaluations: z
