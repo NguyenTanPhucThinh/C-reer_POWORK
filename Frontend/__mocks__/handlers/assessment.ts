@@ -23,17 +23,19 @@ const MOCK_SUBMISSION: SubmissionReceipt = {
   hash_id: 'Candidate_9F7A64D4297F45FA1E63B6A027AECE85',
   version: 1,
   status: 'Pending',
+  file_status: 'PendingScan',
   submitted_at: new Date().toISOString(),
 };
 
 export const assessmentHandlers = [
   http.post(`${BASE}/submissions`, () => {
-    const hashId = `Candidate_${crypto.randomUUID().replaceAll('-', '').toUpperCase()}`;
+    const hashId = `Candidate_${crypto.randomUUID().replace(/-/g, '').toUpperCase()}`;
     const submission: SubmissionReceipt = {
       submission_id: `mock-${Date.now()}`,
       hash_id: hashId,
       version: 1,
       status: 'Pending',
+      file_status: 'PendingScan',
       submitted_at: new Date().toISOString(),
     };
     return HttpResponse.json(success(submission), { status: 201 });
@@ -49,6 +51,7 @@ export const assessmentHandlers = [
             submission_id: MOCK_SUBMISSION.submission_id,
             version: MOCK_SUBMISSION.version,
             status: MOCK_SUBMISSION.status,
+            file_status: 'Safe',
             solution_url: 'https://github.com/mock-candidate/solution',
             submitted_at: MOCK_SUBMISSION.submitted_at,
           },

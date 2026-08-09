@@ -1,6 +1,7 @@
 import type { RubricCriteria } from './challenge';
 
 export type SubmissionStatus = 'Pending' | 'Evaluated' | 'Approved' | 'Rejected';
+export type FileScanStatus = 'AwaitingUpload' | 'PendingScan' | 'Safe' | 'Rejected' | 'ScanFailed';
 
 export type DocumentKind = 'pdf' | 'image' | 'zip' | 'unknown';
 
@@ -18,6 +19,7 @@ export interface SubmissionReceipt {
   hash_id: string;
   version: number;
   status: SubmissionStatus;
+  file_status: FileScanStatus;
   submitted_at: string;
 }
 
@@ -25,6 +27,7 @@ export interface SubmissionVersion {
   submission_id: string;
   version: number;
   status: SubmissionStatus;
+  file_status: FileScanStatus;
   solution_url: string;
   submitted_at: string;
 }
@@ -103,5 +106,9 @@ export interface GetPresignedUploadUrlRequest {
 export interface GetPresignedUploadUrlResponse {
   upload_url: string;
   object_key: string;
+  submission_id: string;
+  hash_id: string;
+  version: number;
+  file_status: 'AwaitingUpload';
   expires_in: number;
 }
