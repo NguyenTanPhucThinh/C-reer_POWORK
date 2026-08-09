@@ -17,13 +17,12 @@ import * as talentPoolService from '../services/talent-pool.service.js'
 // ─── POST /api/v1/talent-pool ─────────────────────────────────────────────────
 // Ai gọi: Employer — sau khi unlock ứng viên, muốn lưu vào danh sách theo dõi
 // Auth:   Bearer Employer_Token
-// Nhận:  { userId } — userId của ứng viên đã được unlock trước đó
+// Nhận:  { user_id } — userId của ứng viên đã được unlock trước đó
 // Lưu ý: Chỉ được thêm ứng viên đã unlock (isUnlocked = true trong identity_mappings)
-//        Việc kiểm tra này sẽ do TalentPoolService xử lý ở Sprint 1
 export const addToTalentPool = async (req, res) => {
-  const { userId } = req.body
+  const { user_id: userId } = req.body
 
-  if (!userId) throw new AppError('userId là bắt buộc', 400, 'POOL_001')
+  if (!userId) throw new AppError('user_id là bắt buộc', 400, 'POOL_001')
 
   const companyId = req.user.companyId
   if (!companyId) throw new AppError('Tài khoản chưa thuộc công ty nào', 403, 'POOL_003')
