@@ -10,6 +10,8 @@ import { getPresignedUrl } from '../controllers/upload.controller.js'
 import {
   createVerificationQuestions,
   createVerificationEvent,
+  completeCandidateVerification,
+  createVerificationRecordingUploadUrl,
   resumeVerification,
   startVerification,
 } from '../controllers/verification.controller.js'
@@ -24,6 +26,7 @@ import {
   createSubmissionSchema,
   startVerificationSchema,
   verificationEventSchema,
+  completeVerificationSchema,
   evaluateSubmissionSchema,
   unlockSubmissionSchema,
 } from '../models/submission.schema.js'
@@ -77,6 +80,21 @@ router.post(
   authorize('CANDIDATE'),
   validateBody(verificationEventSchema),
   createVerificationEvent,
+)
+
+router.post(
+  '/verifications/:verification_id/recording-upload',
+  authenticate,
+  authorize('CANDIDATE'),
+  createVerificationRecordingUploadUrl,
+)
+
+router.post(
+  '/verifications/:verification_id/complete',
+  authenticate,
+  authorize('CANDIDATE'),
+  validateBody(completeVerificationSchema),
+  completeCandidateVerification,
 )
 
 // Employer xem danh sách bài nộp — group theo hash_id, nhiều version

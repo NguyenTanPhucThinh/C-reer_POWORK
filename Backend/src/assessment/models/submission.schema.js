@@ -40,6 +40,29 @@ export const verificationEventSchema = z
   })
   .strict()
 
+// POST /assessment/verifications/:verification_id/complete
+export const completeVerificationSchema = z
+  .object({
+    object_key: z
+      .string()
+      .regex(
+        /^verifications\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.webm$/i,
+      ),
+    recording_mime_type: z.literal('video/webm'),
+    answers: z
+      .array(
+        z
+          .object({
+            question_id: z.string().uuid(),
+            answer: z.string().trim().min(1).max(4000),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(3),
+  })
+  .strict()
+
 // POST /assessment/submissions/:submission_id/evaluate
 export const evaluateSubmissionSchema = z.object({
   evaluations: z

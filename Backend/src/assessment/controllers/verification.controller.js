@@ -5,6 +5,10 @@ import {
   startCandidateVerification,
 } from '../services/verification.service.js'
 import { getOrCreateVerificationQuestions } from '../services/verification-question.service.js'
+import {
+  completeVerification,
+  createVerificationRecordingUpload,
+} from '../services/verification-recording.service.js'
 
 const verificationStatusToApi = {
   PENDING_CAMERA: 'PendingCamera',
@@ -60,4 +64,33 @@ export const createVerificationQuestions = async (req, res) => {
 export const createVerificationEvent = async (req, res) => {
   await recordVerificationEvent(req.params.verification_id, req.user.userId, req.body.event)
   return res.status(204).send()
+}
+
+export const createVerificationRecordingUploadUrl = async (req, res) => {
+  const upload = await createVerificationRecordingUpload(
+    req.params.verification_id,
+    req.user.userId,
+  )
+  return sendSuccess(res, {
+    upload_url: upload.uploadUrl,
+    object_key: upload.objectKey,
+    expires_in: upload.expiresIn,
+  })
+}
+
+export const completeCandidateVerification = async (req, res) => {
+  const result = await completeVerification({
+    verificationId: req.params.verification_id,
+    userId: req.user.userId,
+    objectKey: req.body.object_key,
+    recordingMimeType: req.body.recording_mime_type,
+    answers: req.body.answers.map((answer) => ({
+      questionId: answer.question_id,
+      answer: answer.answer,
+    })),
+  })
+  return sendSuccess(res, {
+    verification_id: result.verificationId,
+    verification_status: verificationStatusToApi[result.status],
+  })
 }
