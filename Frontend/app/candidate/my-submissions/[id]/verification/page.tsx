@@ -15,6 +15,7 @@ import type {
   ApiErrorBody,
   OralDurationSeconds,
   VerificationEvent,
+  VerificationQuestion,
   VerificationSession,
   VerificationStatus,
 } from '@/lib/types';
@@ -43,6 +44,10 @@ interface VerificationState {
   fullscreenMessage: string | null;
   recordingError: string | null;
   oralCompleted: boolean;
+  questions: VerificationQuestion[];
+  answers: Record<string, string>;
+  questionError: string | null;
+  notice: string | null;
 }
 
 type VerificationAction =
@@ -55,6 +60,16 @@ type VerificationAction =
   | { type: 'FULLSCREEN_FAILED' }
   | { type: 'RECORDING_ERROR'; message: string | null }
   | { type: 'ORAL_COMPLETED_CONFIRMED' }
+  | { type: 'QUESTIONS_LOADING' }
+  | {
+      type: 'QUESTIONS_LOADED';
+      questions: VerificationQuestion[];
+      status: VerificationStatus;
+    }
+  | { type: 'QUESTIONS_FAILED'; message: string }
+  | { type: 'ANSWER_CHANGED'; questionId: string; answer: string }
+  | { type: 'SHOW_NOTICE'; message: string }
+  | { type: 'CLEAR_NOTICE' }
   | {
       type: 'FAIL';
       error: VerificationState['error'];
@@ -110,6 +125,10 @@ const initialState: VerificationState = {
   fullscreenMessage: null,
   recordingError: null,
   oralCompleted: false,
+  questions: [],
+  answers: {},
+  questionError: null,
+  notice: null,
 };
 
 function verificationReducer(
@@ -126,6 +145,9 @@ function verificationReducer(
         fullscreenMessage: null,
         recordingError: null,
         oralCompleted: false,
+        questions: [],
+        answers: {},
+        questionError: null,
       };
     case 'SELECT_DURATION':
       return { ...state, oralDurationSeconds: action.duration };
@@ -160,6 +182,27 @@ function verificationReducer(
       return { ...state, recordingError: action.message };
     case 'ORAL_COMPLETED_CONFIRMED':
       return { ...state, oralCompleted: true, recordingError: null };
+    case 'QUESTIONS_LOADING':
+      return { ...state, phase: 'GENERATING_QUESTIONS', questionError: null };
+    case 'QUESTIONS_LOADED':
+      return {
+        ...state,
+        phase: STATUS_PHASE[action.status],
+        session: state.session ? { ...state.session, status: action.status } : null,
+        questions: action.questions,
+        questionError: null,
+      };
+    case 'QUESTIONS_FAILED':
+      return { ...state, phase: 'ORAL_ACTIVE', questionError: action.message };
+    case 'ANSWER_CHANGED':
+      return {
+        ...state,
+        answers: { ...state.answers, [action.questionId]: action.answer },
+      };
+    case 'SHOW_NOTICE':
+      return { ...state, notice: action.message };
+    case 'CLEAR_NOTICE':
+      return { ...state, notice: null };
     case 'FAIL':
       return {
         ...state,
@@ -293,6 +336,9 @@ export default function CandidateVerificationPage() {
   const oralCompleteRequest = useRef<{ id: string; promise: Promise<void> } | null>(null);
   const cameraInterruptedId = useRef<string | null>(null);
   const cameraInterruptionRequest = useRef<{ id: string; promise: Promise<void> } | null>(null);
+  const questionsLoadedId = useRef<string | null>(null);
+  const questionRequest = useRef<{ id: string; promise: Promise<void> } | null>(null);
+  const lastBlockedAction = useRef<{ event: VerificationEvent; at: number } | null>(null);
 
   const fail = useCallback((error: unknown, retryAction: Exclude<RetryAction, null>) => {
     const detail = describeError(error);
@@ -370,6 +416,62 @@ export default function CandidateVerificationPage() {
     }
   }, []);
 
+  const loadQuestions = useCallback((verificationId: string) => {
+    if (questionsLoadedId.current === verificationId) return Promise.resolve();
+    if (questionRequest.current?.id === verificationId) return questionRequest.current.promise;
+
+    dispatch({ type: 'QUESTIONS_LOADING' });
+    const request: Promise<void> = assessmentAPI
+      .generateVerificationQuestions(verificationId)
+      .then((result) => {
+        questionsLoadedId.current = verificationId;
+        dispatch({
+          type: 'QUESTIONS_LOADED',
+          questions: result.questions,
+          status: result.status,
+        });
+      })
+      .catch((error) => {
+        dispatch({ type: 'QUESTIONS_FAILED', message: describeError(error).message });
+      })
+      .finally(() => {
+        if (questionRequest.current?.promise === request) questionRequest.current = null;
+      });
+    questionRequest.current = { id: verificationId, promise: request };
+    return request;
+  }, []);
+
+  const reportBlockedAction = useCallback(
+    (
+      event: Extract<
+        VerificationEvent,
+        'PASTE_BLOCKED' | 'COPY_BLOCKED' | 'DROP_BLOCKED' | 'SELECT_ALL_BLOCKED'
+      >
+    ) => {
+      const now = Date.now();
+      if (lastBlockedAction.current?.event === event && now - lastBlockedAction.current.at < 500) {
+        return;
+      }
+      lastBlockedAction.current = { event, at: now };
+
+      const message =
+        event === 'PASTE_BLOCKED'
+          ? 'Dán nội dung đã bị chặn. Vui lòng tự nhập câu trả lời.'
+          : event === 'COPY_BLOCKED'
+            ? 'Sao chép nội dung đã bị chặn trong phần trả lời.'
+            : event === 'DROP_BLOCKED'
+              ? 'Thả nội dung vào câu trả lời đã bị chặn.'
+              : 'Chọn toàn bộ nội dung đã bị chặn.';
+      dispatch({ type: 'SHOW_NOTICE', message });
+
+      const verificationId = state.session?.verificationId;
+      if (verificationId) {
+        void sendVerificationEventWithRetry(verificationId, event, 2).catch(() => undefined);
+      }
+    },
+    [state.session?.verificationId]
+  );
+
   const resumeSession = useCallback(async () => {
     if (!submissionId || transitionLock.current) return;
 
@@ -396,6 +498,9 @@ export default function CandidateVerificationPage() {
       }
       if (session.status === 'CameraActive') oralStartedId.current = session.verificationId;
       dispatch({ type: 'SYNC_SESSION', session });
+      if (session.status === 'GeneratingQuestions' || session.status === 'Answering') {
+        void loadQuestions(session.verificationId);
+      }
       const resumedPhase = STATUS_PHASE[session.status];
       if (
         resumedPhase !== 'COMPLETED' &&
@@ -409,7 +514,7 @@ export default function CandidateVerificationPage() {
     } finally {
       transitionLock.current = false;
     }
-  }, [fail, submissionId]);
+  }, [fail, loadQuestions, submissionId]);
 
   useEffect(() => {
     void resumeSession();
@@ -526,6 +631,7 @@ export default function CandidateVerificationPage() {
     try {
       await sendOralCompleted(verificationId);
       dispatch({ type: 'ORAL_COMPLETED_CONFIRMED' });
+      await loadQuestions(verificationId);
     } catch (error) {
       dispatch({ type: 'RECORDING_ERROR', message: describeError(error).message });
     }
@@ -547,6 +653,12 @@ export default function CandidateVerificationPage() {
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, [isSessionInProgress]);
+
+  useEffect(() => {
+    if (!state.notice) return;
+    const timer = window.setTimeout(() => dispatch({ type: 'CLEAR_NOTICE' }), 1800);
+    return () => window.clearTimeout(timer);
+  }, [state.notice]);
 
   useEffect(() => {
     if (!state.session || !FOCUS_TRACKING_PHASES.has(state.phase)) return;
@@ -688,7 +800,32 @@ export default function CandidateVerificationPage() {
             />
           )}
 
-          {state.phase === 'ORAL_ACTIVE' && state.session && (
+          {state.phase === 'ORAL_ACTIVE' && state.session && state.questionError && (
+            <section
+              className="rounded-xl border border-warning bg-warning-bg p-6 sm:p-8"
+              role="alert"
+            >
+              <p className="text-xs font-semibold uppercase tracking-wider text-warning">
+                Chưa thể chuẩn bị câu hỏi
+              </p>
+              <h2 className="mt-2 text-2xl font-semibold">
+                Bài trình bày của bạn vẫn được giữ nguyên
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-foreground-secondary">
+                {state.questionError}
+              </p>
+              <Button
+                type="button"
+                variant="primary"
+                className="mt-5"
+                onClick={() => void loadQuestions(state.session!.verificationId)}
+              >
+                Thử tải lại bộ câu hỏi
+              </Button>
+            </section>
+          )}
+
+          {state.phase === 'ORAL_ACTIVE' && state.session && !state.questionError && (
             <CameraRecordingPanel
               session={state.session}
               status={recorder.status}
@@ -702,9 +839,36 @@ export default function CandidateVerificationPage() {
             />
           )}
 
+          {(state.phase === 'GENERATING_QUESTIONS' ||
+            (state.phase === 'ANSWERING' && state.questions.length === 0)) && (
+            <section
+              className="rounded-xl border-hairline border-border bg-background-secondary p-8 text-center"
+              aria-live="polite"
+            >
+              <div className="mx-auto h-9 w-9 animate-spin rounded-full border-2 border-border border-t-accent" />
+              <h2 className="mt-5 text-xl font-semibold">Đang chuẩn bị câu hỏi tự luận...</h2>
+              <p className="mt-2 text-sm text-foreground-secondary">
+                Bộ câu hỏi được tạo một lần từ nội dung Challenge và sẽ không thể đổi sang bộ khác.
+              </p>
+            </section>
+          )}
+
+          {state.phase === 'ANSWERING' && state.questions.length > 0 && (
+            <EssayAnsweringPanel
+              questions={state.questions}
+              answers={state.answers}
+              onAnswerChange={(questionId, answer) =>
+                dispatch({ type: 'ANSWER_CHANGED', questionId, answer })
+              }
+              onBlocked={reportBlockedAction}
+            />
+          )}
+
           {state.phase !== 'PREPARING' &&
             state.phase !== 'STARTING' &&
             state.phase !== 'ORAL_ACTIVE' &&
+            state.phase !== 'GENERATING_QUESTIONS' &&
+            state.phase !== 'ANSWERING' &&
             state.phase !== 'FAILED' &&
             state.phase !== 'COMPLETED' &&
             state.session && (
@@ -769,7 +933,115 @@ export default function CandidateVerificationPage() {
           Mã Submission: <span className="font-mono">{submissionId || 'Không xác định'}</span>
         </footer>
       </div>
+
+      {state.notice && (
+        <div
+          className="fixed bottom-6 left-1/2 z-50 max-w-sm -translate-x-1/2 rounded-lg border-hairline border-border bg-foreground px-4 py-3 text-center text-sm text-background shadow-lg"
+          role="status"
+          aria-live="polite"
+        >
+          {state.notice}
+        </div>
+      )}
     </div>
+  );
+}
+
+type BlockedTypingEvent = Extract<
+  VerificationEvent,
+  'PASTE_BLOCKED' | 'COPY_BLOCKED' | 'DROP_BLOCKED' | 'SELECT_ALL_BLOCKED'
+>;
+
+function EssayAnsweringPanel({
+  questions,
+  answers,
+  onAnswerChange,
+  onBlocked,
+}: {
+  questions: VerificationQuestion[];
+  answers: Record<string, string>;
+  onAnswerChange: (questionId: string, answer: string) => void;
+  onBlocked: (event: BlockedTypingEvent) => void;
+}) {
+  return (
+    <section className="rounded-xl border-hairline border-border bg-background-secondary p-5 sm:p-8">
+      <p className="text-xs font-semibold uppercase tracking-wider text-accent">Câu hỏi tự luận</p>
+      <h2 className="mt-2 text-2xl font-semibold">Trình bày hiểu biết của bạn</h2>
+      <p className="mt-2 max-w-3xl text-sm leading-6 text-foreground-secondary">
+        Hãy tự nhập câu trả lời. Dán, sao chép, thả nội dung và chọn toàn bộ bằng Ctrl/Cmd + A bị
+        chặn và được ghi nhận như tín hiệu phiên.
+      </p>
+
+      <div className="mt-7 space-y-7">
+        {questions.map((question, index) => {
+          const answer = answers[question.questionId] ?? '';
+          const length = answer.length;
+          const isValid = length >= question.minimumLength && length <= question.maximumLength;
+
+          const block = (event: { preventDefault: () => void }, type: BlockedTypingEvent) => {
+            event.preventDefault();
+            onBlocked(type);
+          };
+
+          return (
+            <article
+              key={question.questionId}
+              className="rounded-xl border-hairline border-border bg-background p-5"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <label
+                  htmlFor={`answer-${question.questionId}`}
+                  className="font-semibold leading-6"
+                >
+                  Câu {index + 1}. {question.question}
+                </label>
+                <Badge variant={isValid ? 'done' : 'blind'}>
+                  {isValid ? 'Đủ điều kiện' : `Tối thiểu ${question.minimumLength}`}
+                </Badge>
+              </div>
+
+              <textarea
+                id={`answer-${question.questionId}`}
+                value={answer}
+                maxLength={question.maximumLength}
+                rows={8}
+                spellCheck
+                onChange={(event) => onAnswerChange(question.questionId, event.target.value)}
+                onPaste={(event) => block(event, 'PASTE_BLOCKED')}
+                onCopy={(event) => block(event, 'COPY_BLOCKED')}
+                onDrop={(event) => block(event, 'DROP_BLOCKED')}
+                onKeyDown={(event) => {
+                  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a') {
+                    block(event, 'SELECT_ALL_BLOCKED');
+                  }
+                }}
+                onBeforeInput={(event) => {
+                  const inputType = (event.nativeEvent as InputEvent).inputType;
+                  if (inputType === 'insertFromPaste') block(event, 'PASTE_BLOCKED');
+                  if (inputType === 'insertFromDrop') block(event, 'DROP_BLOCKED');
+                }}
+                aria-describedby={`answer-help-${question.questionId}`}
+                className="mt-4 w-full resize-y rounded-lg border-hairline border-border bg-background-secondary px-4 py-3 text-sm leading-6 text-foreground outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-focus"
+              />
+
+              <div
+                id={`answer-help-${question.questionId}`}
+                className="mt-2 flex flex-wrap justify-between gap-2 text-xs"
+              >
+                <span className={isValid ? 'text-success' : 'text-foreground-tertiary'}>
+                  {isValid
+                    ? 'Câu trả lời đã đạt độ dài yêu cầu.'
+                    : `Cần thêm ${Math.max(question.minimumLength - length, 0)} ký tự.`}
+                </span>
+                <span className="font-mono text-foreground-tertiary">
+                  {length}/{question.maximumLength}
+                </span>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
