@@ -9,10 +9,11 @@
  *   Profile Module:    PROF_001, PROF_002...
  */
 export class AppError extends Error {
-  constructor(message, statusCode = 500, errorCode = null) {
+  constructor(message, statusCode = 500, errorCode = null, details = undefined) {
     super(message)
     this.statusCode = statusCode
     this.errorCode = errorCode
+    this.details = details
     this.name = 'AppError'
     Error.captureStackTrace(this, this.constructor)
   }

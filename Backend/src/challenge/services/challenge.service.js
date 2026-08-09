@@ -18,6 +18,7 @@
  */
 import { AppError } from '../../shared/utils/AppError.js'
 import * as challengeRepository from '../repositories/challenge.repository.js'
+import { moderateChallenge } from './moderation.service.js'
 
 // ─── TC_CHAL_004 / TC_CHAL_005: Tổng weight phải đúng = 100 ──────────────────
 const validateRubricWeight = (rubrics) => {
@@ -45,22 +46,35 @@ const validateNoDuplicateCriteria = (rubrics) => {
 }
 
 // ─── POST /api/v1/challenges ───────────────────────────────────────────────────
-export const createChallenge = async ({
-  companyId,
-  companyName,
-  title,
-  description,
-  industry,
-  deadline,
-  rubrics,
-}) => {
+export const createChallenge = async (
+  { companyId, companyName, title, description, industry, deadline, rubrics },
+  dependencies = {},
+) => {
   // Validate nghiệp vụ — chạy theo đúng thứ tự test case của TL
   validateDeadline(deadline) // TC_008
   validateNoDuplicateCriteria(rubrics) // TC_009
   validateRubricWeight(rubrics) // TC_004 / TC_005
 
+  const moderation = await (dependencies.moderate ?? moderateChallenge)({
+    title,
+    description,
+    industry,
+    rubricCriteria: rubrics.map((rubric) => rubric.criteriaName),
+  })
+
+  if (moderation.decision === 'NEEDS_REVISION') {
+    throw new AppError(
+      'Challenge cần được chỉnh sửa trước khi phát hành.',
+      422,
+      'CHAL_MODERATION_REQUIRED',
+      moderation,
+    )
+  }
+
   // Nested Write — Challenge + RubricCriteria trong 1 transaction
-  const challenge = await challengeRepository.createChallengeWithRubrics({
+  const challenge = await (
+    dependencies.repository ?? challengeRepository
+  ).createChallengeWithRubrics({
     companyId,
     companyName,
     title,
