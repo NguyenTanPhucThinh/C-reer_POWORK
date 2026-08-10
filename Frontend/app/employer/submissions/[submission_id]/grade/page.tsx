@@ -2,7 +2,11 @@
 
 import { useMemo, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
-import { DocumentViewer, RubricScoringForm } from '@/components/assessment';
+import {
+  DocumentViewer,
+  RubricScoringForm,
+  SubmissionContentViewer,
+} from '@/components/assessment';
 import { Badge, Button } from '@/components/ui';
 import { useEvaluateSubmission, useGradingSubmission, useUnlockSubmission } from '@/lib/hooks';
 import { useAddToTalentPool } from '../../../../../lib/hooks/useTalentPool'; // Import useAddToTalentPool hook
@@ -463,9 +467,9 @@ function GradeSubmissionWorkspace({ submission }: { submission: GradingSubmissio
               </p>
             </div>
             <div className="rounded-md border-hairline border-border bg-background px-3 py-2">
-              <p className="text-2xs uppercase text-foreground-tertiary">Tài liệu</p>
-              <p className="mt-0.5 font-mono text-sm text-foreground">
-                {submission.documents.length}
+              <p className="text-2xs uppercase text-foreground-tertiary">Hình thức</p>
+              <p className="mt-0.5 text-sm font-medium text-foreground">
+                {submission.submission_method === 'Text' ? 'Bài viết' : 'Tệp đính kèm'}
               </p>
             </div>
           </div>
@@ -495,15 +499,25 @@ function GradeSubmissionWorkspace({ submission }: { submission: GradingSubmissio
             </div>
           </div>
 
-          <DocumentsTabs
-            documents={submission.documents}
-            activeDocIndex={safeActiveDocIndex}
-            onChange={setActiveDocIndex}
-          />
-
-          <div className="min-h-0 flex-1">
-            <DocumentViewer document={activeDoc} />
-          </div>
+          {submission.submission_method === 'Text' ? (
+            <div className="min-h-0 flex-1">
+              <SubmissionContentViewer
+                content={submission.content}
+                format={submission.content_format}
+              />
+            </div>
+          ) : (
+            <>
+              <DocumentsTabs
+                documents={submission.documents}
+                activeDocIndex={safeActiveDocIndex}
+                onChange={setActiveDocIndex}
+              />
+              <div className="min-h-0 flex-1">
+                <DocumentViewer document={activeDoc} />
+              </div>
+            </>
+          )}
         </section>
 
         <aside className="flex min-h-[560px] flex-col gap-4 rounded-lg border-hairline border-border-secondary bg-background-secondary p-4 lg:min-h-0">
