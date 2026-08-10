@@ -7,5 +7,6 @@ export {
   VerificationOverview,
   VerificationTimelineSection,
   VerificationStatisticsSection,
+  VerificationIntegritySignalsSection,
   VerificationQuestionAnswersSection,
 } from './VerificationDashboardSections';

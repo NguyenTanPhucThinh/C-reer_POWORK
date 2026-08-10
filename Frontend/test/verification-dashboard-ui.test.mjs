@@ -20,6 +20,7 @@ test('unlocked Employer dashboard renders every evidence area from the protected
     'VerificationOverview',
     'VerificationTimelineSection',
     'VerificationStatisticsSection',
+    'VerificationIntegritySignalsSection',
     'VerificationQuestionAnswersSection',
   ]) {
     assert.match(page, new RegExp(section));

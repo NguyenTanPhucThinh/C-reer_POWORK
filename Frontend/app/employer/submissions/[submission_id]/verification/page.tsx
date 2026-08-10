@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useParams, useRouter } from 'next/navigation';
 import {
   VerificationOverview,
+  VerificationIntegritySignalsSection,
   VerificationQuestionAnswersSection,
   VerificationStatisticsSection,
   VerificationTimelineSection,
@@ -93,7 +94,10 @@ export default function EmployerVerificationDashboardPage() {
         questions={dashboard.data.questions}
         answers={dashboard.data.answers}
       />
-      <EmployerVerificationVideoPlayer submissionId={submissionId} video={dashboard.data.video} />
+      <div className="grid items-start gap-5 xl:grid-cols-[1fr_1.1fr]">
+        <VerificationIntegritySignalsSection statistics={dashboard.data.statistics} />
+        <EmployerVerificationVideoPlayer submissionId={submissionId} video={dashboard.data.video} />
+      </div>
     </main>
   );
 }
