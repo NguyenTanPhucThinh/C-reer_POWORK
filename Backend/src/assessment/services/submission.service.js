@@ -53,31 +53,43 @@ export const prepareSubmissionUpload = async ({ userId, challengeId, filename })
 }
 
 // ─── POST /api/v1/assessment/submissions ──────────────────────────────────────
-const sanitizeRichText = (content) =>
-  sanitizeHtml(content, {
-    allowedTags: [
-      'p',
-      'br',
-      'strong',
-      'b',
-      'em',
-      'i',
-      'u',
-      's',
-      'h1',
-      'h2',
-      'h3',
-      'ul',
-      'ol',
-      'li',
-      'blockquote',
-      'pre',
-      'code',
-      'a',
-    ],
-    allowedAttributes: { a: ['href'] },
-    allowedSchemes: ['http', 'https', 'mailto'],
-  })
+export const sanitizeSubmissionContent = (content, contentFormat) => {
+  const sanitizedContent =
+    contentFormat === 'RICH_TEXT'
+      ? sanitizeHtml(content, {
+          allowedTags: [
+            'p',
+            'br',
+            'strong',
+            'b',
+            'em',
+            'i',
+            'u',
+            's',
+            'h1',
+            'h2',
+            'h3',
+            'ul',
+            'ol',
+            'li',
+            'blockquote',
+            'pre',
+            'code',
+            'a',
+          ],
+          allowedAttributes: { a: ['href'] },
+          allowedSchemes: ['http', 'https', 'mailto'],
+        })
+      : content
+  const readableContent =
+    contentFormat === 'RICH_TEXT'
+      ? sanitizeHtml(sanitizedContent, { allowedTags: [], allowedAttributes: {} }).trim()
+      : sanitizedContent.trim()
+  if (readableContent.length < 50) {
+    throw new AppError('Bài làm phải có ít nhất 50 ký tự nội dung.', 400, 'ASSESS_012')
+  }
+  return sanitizedContent
+}
 
 const sendConfirmation = ({ userId, submission, challengeTitle }) => {
   userLookupService
@@ -108,14 +120,7 @@ export const submitSolution = async ({
     const challenge = await prisma.challenge.findUnique({ where: { id: challengeId } })
     if (!challenge) throw new AppError('Không tìm thấy challenge tương ứng', 404, 'CHAL_004')
 
-    const sanitizedContent = contentFormat === 'RICH_TEXT' ? sanitizeRichText(content) : content
-    const readableContent =
-      contentFormat === 'RICH_TEXT'
-        ? sanitizeHtml(sanitizedContent, { allowedTags: [], allowedAttributes: {} }).trim()
-        : sanitizedContent.trim()
-    if (readableContent.length < 50) {
-      throw new AppError('Bài làm phải có ít nhất 50 ký tự nội dung.', 400, 'ASSESS_012')
-    }
+    const sanitizedContent = sanitizeSubmissionContent(content, contentFormat)
 
     const mapping = await submissionRepository.findOrCreateIdentityMapping({
       hashId: generateHashId(userId, challengeId),
