@@ -6,7 +6,12 @@ import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import axios from 'axios';
 import { assessmentAPI } from '@/lib/api/endpoints';
-import { SubmissionHistory, Uploader, type UploadMetadata } from '@/components/submissions';
+import {
+  TextSubmissionEditor,
+  Uploader,
+  type TextSubmissionFormat,
+  type UploadMetadata,
+} from '@/components/submissions';
 import { Badge, Button } from '@/components/ui';
 
 function getChallengeId(params: ReturnType<typeof useParams>): string {
@@ -19,6 +24,13 @@ export default function CandidateChallengeSubmitPage() {
   const router = useRouter();
   const [isUploaderOpen, setIsUploaderOpen] = useState(false);
 
+  const getErrorMessage = (error: unknown) =>
+    axios.isAxiosError(error)
+      ? error.response?.data?.message || error.message
+      : error instanceof Error
+        ? error.message
+        : 'Đã xảy ra lỗi không xác định.';
+
   const { mutateAsync: uploadSubmission, isPending: isUploading } = useMutation({
     mutationFn: async ({ file, metadata }: { file: File; metadata: UploadMetadata }) => {
       const { upload_url, object_key } = await assessmentAPI.getPresignedUploadUrl({
@@ -28,19 +40,37 @@ export default function CandidateChallengeSubmitPage() {
       });
 
       await axios.put(upload_url, file, { headers: { 'Content-Type': file.type } });
-      return assessmentAPI.submit({ challenge_id: challengeId, solution_url: object_key });
+      return assessmentAPI.submit({
+        challenge_id: challengeId,
+        submission_method: 'FILE',
+        solution_url: object_key,
+      });
     },
     onSuccess: (submission) => {
       setIsUploaderOpen(false);
       router.push(`/candidate/my-submissions/${submission.submission_id}/verification`);
     },
     onError: (error) => {
-      const message = axios.isAxiosError(error)
-        ? error.response?.data?.message || error.message
-        : error instanceof Error
-          ? error.message
-          : 'Đã xảy ra lỗi không xác định.';
-      alert(`Nộp bài thất bại: ${message}`);
+      alert(`Nộp bài thất bại: ${getErrorMessage(error)}`);
+    },
+  });
+
+  const textSubmission = useMutation({
+    mutationFn: ({
+      content,
+      contentFormat,
+    }: {
+      content: string;
+      contentFormat: TextSubmissionFormat;
+    }) =>
+      assessmentAPI.submit({
+        challenge_id: challengeId,
+        submission_method: 'TEXT',
+        content_format: contentFormat,
+        content,
+      }),
+    onSuccess: (submission) => {
+      router.push(`/candidate/my-submissions/${submission.submission_id}/verification`);
     },
   });
 
@@ -67,11 +97,11 @@ export default function CandidateChallengeSubmitPage() {
         </div>
       </header>
 
-      <section className="flex shrink-0 flex-col gap-3 rounded-lg border-hairline border-border bg-background-secondary px-4 py-3 sm:min-h-16 sm:flex-row sm:items-center sm:justify-between">
+      <section className="flex shrink-0 flex-col gap-3 rounded-lg border-hairline border-border bg-background-secondary px-5 py-4 sm:min-h-16 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-sm font-medium text-foreground">Tải lên bài làm cho challenge này</p>
+          <p className="text-sm font-medium text-foreground">Bạn đã có tài liệu hoàn chỉnh?</p>
           <p className="mt-1 text-xs text-foreground-tertiary">
-            Hệ thống sẽ quét an toàn file trước khi chuyển bài cho Employer.
+            Nộp PDF hoặc ZIP. Hệ thống sẽ kiểm tra an toàn trước khi chuyển bài cho Employer.
           </p>
         </div>
         <Button
@@ -80,15 +110,16 @@ export default function CandidateChallengeSubmitPage() {
           onClick={() => setIsUploaderOpen(true)}
           disabled={isUploading || !challengeId}
         >
-          {isUploading ? 'Đang nộp...' : 'Nộp bài'}
+          {isUploading ? 'Đang tải lên...' : 'Tải file bài làm'}
         </Button>
       </section>
 
-      <SubmissionHistory
-        submissions={[]}
-        error="Lịch sử bài nộp chưa khả dụng cho Candidate. Việc nộp bài mới vẫn hoạt động bình thường."
-        onCreateFirstSubmission={() => setIsUploaderOpen(true)}
-        className="min-h-0"
+      <TextSubmissionEditor
+        disabled={textSubmission.isPending || !challengeId}
+        error={textSubmission.isError ? getErrorMessage(textSubmission.error) : null}
+        onSubmit={async ({ content, contentFormat }) => {
+          await textSubmission.mutateAsync({ content, contentFormat });
+        }}
       />
 
       <Uploader

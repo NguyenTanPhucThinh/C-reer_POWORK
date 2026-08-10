@@ -2,6 +2,8 @@ import type { RubricCriteria } from './challenge';
 
 export type SubmissionStatus = 'Pending' | 'Evaluated' | 'Approved' | 'Rejected';
 export type FileScanStatus = 'AwaitingUpload' | 'PendingScan' | 'Safe' | 'Rejected' | 'ScanFailed';
+export type SubmissionMethod = 'File' | 'Text';
+export type SubmissionContentFormat = 'RichText' | 'Markdown';
 
 export type DocumentKind = 'pdf' | 'image' | 'zip' | 'unknown';
 
@@ -18,17 +20,22 @@ export interface SubmissionReceipt {
   submission_id: string;
   hash_id: string;
   version: number;
+  submission_method: SubmissionMethod;
+  content_format: SubmissionContentFormat | null;
   status: SubmissionStatus;
-  file_status: FileScanStatus;
+  file_status: FileScanStatus | null;
   submitted_at: string;
 }
 
 export interface SubmissionVersion {
   submission_id: string;
   version: number;
+  submission_method: SubmissionMethod;
+  content_format: SubmissionContentFormat | null;
   status: SubmissionStatus;
-  file_status: FileScanStatus;
-  solution_url: string;
+  file_status: FileScanStatus | null;
+  solution_url: string | null;
+  content: string | null;
   submitted_at: string;
 }
 
@@ -38,10 +45,14 @@ export interface SubmissionGroup {
   submissions: SubmissionVersion[];
 }
 
-export interface SubmitSolutionRequest {
-  challenge_id: string;
-  solution_url: string;
-}
+export type SubmitSolutionRequest =
+  | { challenge_id: string; submission_method: 'FILE'; solution_url: string }
+  | {
+      challenge_id: string;
+      submission_method: 'TEXT';
+      content_format: 'RICH_TEXT' | 'MARKDOWN';
+      content: string;
+    };
 
 export interface GradingSubmission {
   submission_id: string;
@@ -50,7 +61,10 @@ export interface GradingSubmission {
   challenge_id?: string;
   challenge_title: string;
   submitted_at?: string;
-  solution_url?: string;
+  solution_url?: string | null;
+  submission_method: SubmissionMethod;
+  content_format?: SubmissionContentFormat | null;
+  content?: string | null;
   criteria: RubricCriteria[];
   documents: ReviewDocument[];
   is_unlocked?: boolean;
