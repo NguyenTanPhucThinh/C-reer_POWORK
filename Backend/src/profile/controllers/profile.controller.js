@@ -11,7 +11,7 @@ import * as profileService from '../services/profile.service.js'
 
 // GET /api/v1/profiles/:user_id — public, không cần auth
 export const getProfile = async (req, res) => {
-  const { userId } = req.params
+  const { user_id: userId } = req.params
 
   const profileData = await profileService.getProfileByUserId(userId)
 
