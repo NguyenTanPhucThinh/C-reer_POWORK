@@ -489,6 +489,7 @@ function GradeSubmissionWorkspace({ submission }: { submission: GradingSubmissio
         isError={verificationSummary.isError}
         isUnlocked={isUnlocked}
         onRetry={() => void verificationSummary.refetch()}
+        submissionId={submission.submission_id}
       />
 
       {notice && (

@@ -19,6 +19,15 @@ export function useVerificationSummary(submissionId: string) {
   });
 }
 
+export function useVerificationDashboard(submissionId: string) {
+  return useQuery({
+    queryKey: ['assessment', 'verification-dashboard', submissionId],
+    queryFn: () => assessmentAPI.getVerificationDashboard(submissionId),
+    enabled: Boolean(submissionId),
+    retry: false,
+  });
+}
+
 export function useEvaluateSubmission() {
   const queryClient = useQueryClient();
 

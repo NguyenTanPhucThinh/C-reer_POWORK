@@ -3,6 +3,7 @@ import type {
   VerificationSummary,
   VerificationSummaryStatus,
 } from '@/lib/types';
+import Link from 'next/link';
 
 interface VerificationSummaryCardProps {
   summary?: VerificationSummary;
@@ -10,6 +11,7 @@ interface VerificationSummaryCardProps {
   isError: boolean;
   isUnlocked: boolean;
   onRetry: () => void;
+  submissionId: string;
 }
 
 const statusDetails: Record<
@@ -108,6 +110,7 @@ export function VerificationSummaryCard({
   isError,
   isUnlocked,
   onRetry,
+  submissionId,
 }: VerificationSummaryCardProps) {
   if (isLoading) {
     return (
@@ -164,6 +167,14 @@ export function VerificationSummaryCard({
             </h2>
           </div>
           <p className="mt-1.5 text-xs leading-5 text-foreground-secondary">{description}</p>
+          {summary.status === 'Ready' && isUnlocked && (
+            <Link
+              href={`/employer/submissions/${submissionId}/verification`}
+              className="mt-2 inline-flex text-xs font-semibold text-success underline underline-offset-4"
+            >
+              Xem evidence xác minh
+            </Link>
+          )}
         </div>
 
         <dl className="grid shrink-0 grid-cols-3 gap-2 text-xs xl:min-w-[480px]">
