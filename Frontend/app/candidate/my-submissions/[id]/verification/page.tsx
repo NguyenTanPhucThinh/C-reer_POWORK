@@ -425,11 +425,11 @@ function uploadRecordingBlob(
       else if (request.status === 401 || request.status === 403) {
         reject(
           new DOMException(
-            'URL upload đã hết hạn hoặc không còn hợp lệ. Video vẫn được giữ để xin URL mới.',
+            'Liên kết tải video đã hết hạn. Video vẫn được giữ để bạn thử lại.',
             'PresignedUrlExpiredError'
           )
         );
-      } else reject(new Error(`MinIO từ chối upload với HTTP ${request.status}.`));
+      } else reject(new Error(`Chưa thể tải video lên kho lưu trữ (mã ${request.status}).`));
     };
     request.onerror = () =>
       reject(
@@ -857,7 +857,7 @@ export default function CandidateVerificationPage() {
           state.session.verificationId
         );
         if (objectKey && upload.objectKey !== objectKey) {
-          throw new Error('Backend trả về object key khác với phiên upload hiện tại.');
+          throw new Error('Phiên gửi video chưa đồng bộ. Vui lòng thử lại.');
         }
         objectKey = upload.objectKey;
         dispatch({
@@ -870,7 +870,7 @@ export default function CandidateVerificationPage() {
         dispatch({ type: 'UPLOAD_SUCCEEDED' });
       }
 
-      if (!objectKey) throw new Error('Không tìm thấy object key của video xác thực.');
+      if (!objectKey) throw new Error('Chưa thể chuẩn bị vị trí lưu video. Vui lòng thử lại.');
       stage = 'COMPLETE';
       dispatch({ type: 'COMPLETE_STARTED' });
       try {
@@ -943,7 +943,7 @@ export default function CandidateVerificationPage() {
 
   useEffect(() => {
     if (!state.notice) return;
-    const timer = window.setTimeout(() => dispatch({ type: 'CLEAR_NOTICE' }), 1800);
+    const timer = window.setTimeout(() => dispatch({ type: 'CLEAR_NOTICE' }), 3600);
     return () => window.clearTimeout(timer);
   }, [state.notice]);
 
@@ -987,13 +987,13 @@ export default function CandidateVerificationPage() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-accent">
-                POWORK · Candidate Verification
+                POWORK · Xác thực ứng viên
               </p>
               <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl lg:text-4xl">
                 Xác thực sau khi nộp bài
               </h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-foreground-secondary">
-                Không đóng hoặc tải lại trang khi một thao tác đang được xử lý.
+                Hãy giữ trang này mở cho đến khi bạn nhận được thông báo hoàn tất.
               </p>
             </div>
             <Badge variant={badgeVariant} className="w-fit shrink-0 px-3 py-1 text-xs">
@@ -1008,11 +1008,21 @@ export default function CandidateVerificationPage() {
           className="animate-in py-6 fade-in slide-in-from-bottom-2 duration-300 motion-reduce:animate-none motion-reduce:transition-none sm:py-8"
         >
           {isSessionInProgress && (
-            <section className="mb-5 rounded-xl border-hairline border-border bg-background-secondary/90 p-4 text-sm leading-6 text-foreground-secondary shadow-sm">
-              <p>
-                Trình duyệt sẽ cảnh báo khi bạn tải lại hoặc đóng tab. Hệ thống có thể ghi nhận việc
-                mất tập trung, nhưng không thể và không giả vờ chặn Alt + Tab hay chuyển ứng dụng.
-              </p>
+            <section className="mb-5 flex gap-4 rounded-xl border border-accent/35 bg-accent-bg/70 p-4 shadow-sm sm:p-5">
+              <div
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-lg font-bold text-white shadow-sm"
+                aria-hidden="true"
+              >
+                i
+              </div>
+              <div>
+                <h2 className="font-semibold text-foreground">Giữ phiên làm bài ổn định</h2>
+                <p className="mt-1 text-sm leading-6 text-foreground-secondary">
+                  Hãy duy trì chế độ toàn màn hình, giữ camera hoạt động và tập trung hoàn thành
+                  từng bước. Việc đóng hoặc tải lại trang có thể làm gián đoạn phần bài đang thực
+                  hiện.
+                </p>
+              </div>
             </section>
           )}
 
@@ -1220,33 +1230,70 @@ export default function CandidateVerificationPage() {
             state.session && (
               <SessionPanel
                 title={PHASE_LABEL[state.phase]}
-                message="Hệ thống đã khôi phục đúng trạng thái do Backend xác nhận. Nội dung thao tác của bước này sẽ được nối ở các bước Frontend tiếp theo."
+                message="Phiên làm bài đã được khôi phục. Bạn có thể tiếp tục từ bước gần nhất."
                 session={state.session}
               />
             )}
 
           {state.phase === 'COMPLETED' && state.session && (
-            <section className="overflow-hidden rounded-2xl border border-success bg-success-bg p-6 shadow-[var(--shadow-surface)] sm:p-10">
+            <section className="relative isolate overflow-hidden rounded-3xl border border-success/60 bg-success-bg px-6 py-10 text-center shadow-[0_24px_80px_rgba(52,211,153,0.12)] sm:px-12 sm:py-14">
               <div
-                className="mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-success text-2xl font-bold text-white shadow-md"
+                className="absolute -right-20 -top-24 -z-10 h-64 w-64 rounded-full bg-success/10 blur-3xl"
+                aria-hidden="true"
+              />
+              <div
+                className="absolute -bottom-28 -left-20 -z-10 h-64 w-64 rounded-full bg-accent/10 blur-3xl"
+                aria-hidden="true"
+              />
+              <div
+                className="mx-auto flex h-20 w-20 items-center justify-center rounded-full border-4 border-white/20 bg-success text-4xl font-bold text-white shadow-[0_14px_36px_rgba(52,211,153,0.28)]"
                 aria-hidden="true"
               >
                 ✓
               </div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-success">
-                Hoàn tất
+              <p className="mt-6 text-xs font-semibold uppercase tracking-[0.24em] text-success">
+                Đã gửi thành công
               </p>
-              <h2 className="mt-2 text-2xl font-semibold sm:text-3xl">
-                Cảm ơn bạn đã hoàn thành xác thực
+              <h2 className="mx-auto mt-3 max-w-3xl text-3xl font-semibold tracking-tight sm:text-4xl">
+                Cảm ơn bạn đã hoàn thành phần xác thực
               </h2>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-foreground-secondary">
-                Phiên đã được Backend xác nhận hoàn tất. Chúc bạn có một buổi phỏng vấn thuận lợi.
+              <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-foreground-secondary sm:text-base">
+                Bài trình bày và câu trả lời của bạn đã được ghi nhận an toàn. Bạn có thể yên tâm
+                đóng trang này và chuẩn bị cho những bước tiếp theo.
               </p>
+
+              <div className="mx-auto mt-8 grid max-w-3xl gap-3 text-left sm:grid-cols-3">
+                {[
+                  ['01', 'Bài trình bày', 'Đã ghi nhận'],
+                  ['02', 'Câu trả lời', 'Đã gửi đầy đủ'],
+                  ['03', 'Kiểm tra an toàn', 'Đã hoàn tất'],
+                ].map(([number, label, value]) => (
+                  <div
+                    key={number}
+                    className="rounded-2xl border border-success/25 bg-background/55 p-4 backdrop-blur-sm"
+                  >
+                    <span className="font-mono text-xs font-semibold text-success">{number}</span>
+                    <p className="mt-2 text-sm font-semibold text-foreground">{label}</p>
+                    <p className="mt-1 text-xs text-foreground-secondary">{value}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mx-auto mt-8 max-w-2xl rounded-2xl border-hairline border-border bg-background-secondary/75 p-5 text-left">
+                <p className="text-sm font-semibold text-foreground">
+                  Điều gì sẽ diễn ra tiếp theo?
+                </p>
+                <p className="mt-2 text-sm leading-6 text-foreground-secondary">
+                  Nhà tuyển dụng sẽ đánh giá bài làm theo tiêu chí của Challenge. Danh tính của bạn
+                  tiếp tục được bảo vệ trong quá trình đánh giá năng lực.
+                </p>
+              </div>
+
               <Link
-                href="/candidate/my-submissions"
-                className="mt-7 inline-flex rounded-lg text-sm font-semibold text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-4 focus-visible:ring-offset-success-bg"
+                href="/candidate/dashboard"
+                className="mt-8 inline-flex min-h-11 items-center justify-center rounded-xl bg-accent px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-4 focus-visible:ring-offset-success-bg motion-reduce:transition-none motion-reduce:hover:translate-y-0"
               >
-                Quay lại bài nộp của tôi
+                Về trang tổng quan
               </Link>
             </section>
           )}
@@ -1293,17 +1340,27 @@ export default function CandidateVerificationPage() {
         </main>
 
         <footer className="border-t-hairline border-border py-5 text-center text-xs text-foreground-tertiary sm:text-left">
-          Mã Submission: <span className="font-mono">{submissionId || 'Không xác định'}</span>
+          Mã tham chiếu bài nộp:{' '}
+          <span className="font-mono">{submissionId || 'Không xác định'}</span>
         </footer>
       </div>
 
       {state.notice && (
         <div
-          className="animate-in fixed bottom-4 left-1/2 z-50 w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 rounded-xl border-hairline border-border bg-foreground px-4 py-3 text-center text-sm text-background shadow-lg fade-in slide-in-from-bottom-2 motion-reduce:animate-none sm:bottom-6"
+          className="animate-in fixed right-4 top-4 z-50 flex w-[calc(100%-2rem)] max-w-md items-start gap-3 rounded-2xl border border-warning/45 bg-background-secondary p-4 text-left shadow-[0_20px_60px_rgba(0,0,0,0.35)] fade-in slide-in-from-top-2 motion-reduce:animate-none sm:right-6 sm:top-6"
           role="status"
           aria-live="polite"
         >
-          {state.notice}
+          <div
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-warning-bg text-lg font-bold text-warning"
+            aria-hidden="true"
+          >
+            !
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-foreground">Thao tác đã được chặn</p>
+            <p className="mt-1 text-sm leading-5 text-foreground-secondary">{state.notice}</p>
+          </div>
         </div>
       )}
     </div>
@@ -1524,7 +1581,7 @@ function EvidenceUploadPanel({
           ? 'Đang quét an toàn video'
           : uploaded
             ? 'Chưa thể hoàn tất xác thực'
-            : 'Đang chuẩn bị upload';
+            : 'Đang chuẩn bị tải video';
   const recovery = error
     ? {
         NETWORK: {
@@ -1532,20 +1589,20 @@ function EvidenceUploadPanel({
           action: 'Thử lại khi có kết nối',
         },
         PRESIGNED_EXPIRED: {
-          title: 'URL upload đã hết hạn',
-          action: 'Xin URL mới và thử lại',
+          title: 'Liên kết tải video đã hết hạn',
+          action: 'Tạo liên kết mới và thử lại',
         },
         FILE_TOO_LARGE: {
           title: 'Video vượt quá giới hạn dung lượng',
           action: null,
         },
         UPLOAD: {
-          title: 'Video chưa được upload thành công',
-          action: 'Thử upload lại',
+          title: 'Video chưa được tải lên thành công',
+          action: 'Thử tải lên lại',
         },
         COMPLETE: {
-          title: 'Backend chưa xác nhận hoàn tất',
-          action: 'Thử xác nhận lại',
+          title: 'Chưa thể hoàn tất bài xác thực',
+          action: 'Thử hoàn tất lại',
         },
       }[error.kind]
     : null;
@@ -1559,14 +1616,14 @@ function EvidenceUploadPanel({
       <h2 className="mt-2 text-2xl font-semibold">{recovery?.title ?? activeTitle}</h2>
       <p className="mt-2 text-sm leading-6 text-foreground-secondary">
         {phase === 'SCANNING'
-          ? 'Backend đã nhận video và câu trả lời. Vui lòng chờ kết quả kiểm tra an toàn.'
-          : 'Video và câu trả lời vẫn được giữ trong tab này cho tới khi Backend xác nhận.'}
+          ? 'Video và câu trả lời đã được gửi. Vui lòng chờ trong giây lát để hoàn tất kiểm tra an toàn.'
+          : 'Hãy giữ tab này mở trong lúc video và câu trả lời đang được gửi.'}
       </p>
 
       {(phase === 'UPLOADING' || progress > 0) && (
         <div className="mt-6">
           <div className="mb-2 flex justify-between text-xs font-medium text-foreground-secondary">
-            <span>Upload video WebM</span>
+            <span>Đang gửi video xác thực</span>
             <span className="font-mono tabular-nums text-foreground">{progress}%</span>
           </div>
           <div
@@ -1638,9 +1695,9 @@ function CameraRecordingPanel({
           </p>
           <h2 className="mt-2 text-2xl font-semibold">Phiên ghi hình xác thực</h2>
           <p className="mt-2 text-sm leading-6 text-foreground-secondary">
-            Thời lượng tối đa {formatRecordingTime(session.oralDurationSeconds)}. Video sẽ tự dừng
-            khi hết thời gian. Đồng hồ này chỉ hỗ trợ trải nghiệm; Backend quyết định thời lượng
-            chính thức.
+            Bạn có tối đa {formatRecordingTime(session.oralDurationSeconds)} để trình bày. Hãy nói
+            rõ ràng, đi thẳng vào cách tiếp cận và những quyết định quan trọng trong bài làm. Video
+            sẽ tự dừng khi hết thời gian.
           </p>
         </div>
 
@@ -1698,8 +1755,8 @@ function CameraRecordingPanel({
               <p className="mt-1 text-sm text-white/75">
                 Video có dung lượng {formatFileSize(recordingBlob?.size ?? 0)}.{' '}
                 {oralCompleted
-                  ? 'Backend đã xác nhận giai đoạn trình bày.'
-                  : 'Đang chờ Backend xác nhận giai đoạn trình bày.'}
+                  ? 'Phần trình bày đã được ghi nhận.'
+                  : 'Đang hoàn tất phần trình bày.'}
               </p>
             </div>
           </div>

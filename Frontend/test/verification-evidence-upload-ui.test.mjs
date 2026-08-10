@@ -61,9 +61,9 @@ test('Verification evidence upload retains retry data and follows the frozen Bac
     assert.match(page, new RegExp(`${status}: '(?:COMPLETED|FAILED)'`));
   }
   assert.match(page, /Mất kết nối trong khi hoàn tất/);
-  assert.match(page, /URL upload đã hết hạn/);
+  assert.match(page, /Liên kết tải video đã hết hạn/);
   assert.match(page, /Video vượt quá giới hạn dung lượng/);
-  assert.match(page, /Backend chưa xác nhận hoàn tất/);
-  assert.match(page, /Xin URL mới và thử lại/);
+  assert.match(page, /Chưa thể hoàn tất bài xác thực/);
+  assert.match(page, /Tạo liên kết mới và thử lại/);
   assert.match(page, /FILE_TOO_LARGE:[\s\S]*action: null/);
 });
