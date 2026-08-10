@@ -29,6 +29,11 @@ import type {
   VerificationRecordingUpload,
   CompleteVerificationInput,
   VerificationCompletion,
+  VerificationSummary,
+  VerificationSummaryStatus,
+  VerificationScanStatus,
+  VerificationDashboard,
+  VerificationRecordingAccess,
 } from '@/lib/types';
 
 interface VerificationSessionResponse {
@@ -60,6 +65,55 @@ interface VerificationRecordingUploadResponse {
 interface VerificationCompletionResponse {
   verification_id: string;
   verification_status: VerificationStatus;
+}
+
+interface VerificationSummaryResponse {
+  verification_status: VerificationSummaryStatus;
+  completed_at: string | null;
+  question_count: number;
+  scan_status: VerificationScanStatus;
+}
+
+interface VerificationDashboardResponse {
+  verification_id: string;
+  verification_status: VerificationStatus;
+  statistics: {
+    question_count: number;
+    selected_oral_duration_seconds: number;
+    actual_oral_duration_seconds: number | null;
+    camera_interruption_count: number;
+    camera_interruption_duration_seconds: number;
+    focus_loss_count: number;
+    paste_blocked_count: number;
+    select_all_blocked_count: number;
+    copy_blocked_count: number;
+    drop_blocked_count: number;
+  };
+  timeline: {
+    created_at: string;
+    oral_started_at: string | null;
+    oral_completed_at: string | null;
+    answering_started_at: string | null;
+    answering_completed_at: string | null;
+    completed_at: string | null;
+  };
+  questions: Array<{
+    question_id: string;
+    question: string;
+    minimum_length: number;
+    maximum_length: number;
+  }>;
+  answers: Array<{ question_id: string; answer: string }>;
+  video: {
+    status: 'Ready';
+    recording_mime_type: string | null;
+    recording_size: number | null;
+  };
+}
+
+interface VerificationRecordingResponse {
+  recording_url: string;
+  expires_in: number;
 }
 
 const toVerificationSession = (response: VerificationSessionResponse): VerificationSession => ({
@@ -174,6 +228,71 @@ export const assessmentAPI = {
       (response): VerificationCompletion => ({
         verificationId: response.verification_id,
         status: response.verification_status,
+      })
+    ),
+  getVerificationSummary: (submissionId: string) =>
+    unwrap<VerificationSummaryResponse>(
+      apiClient.get(`/assessment/submissions/${submissionId}/verification-summary`)
+    ).then(
+      (response): VerificationSummary => ({
+        status: response.verification_status,
+        completedAt: response.completed_at,
+        questionCount: response.question_count,
+        scanStatus: response.scan_status,
+      })
+    ),
+  getVerificationDashboard: (submissionId: string) =>
+    unwrap<VerificationDashboardResponse>(
+      apiClient.get(`/assessment/submissions/${submissionId}/verification-dashboard`)
+    ).then(
+      (response): VerificationDashboard => ({
+        verificationId: response.verification_id,
+        status: response.verification_status,
+        statistics: {
+          questionCount: response.statistics.question_count,
+          selectedOralDurationSeconds: response.statistics.selected_oral_duration_seconds,
+          actualOralDurationSeconds: response.statistics.actual_oral_duration_seconds,
+          cameraInterruptionCount: response.statistics.camera_interruption_count,
+          cameraInterruptionDurationSeconds:
+            response.statistics.camera_interruption_duration_seconds,
+          focusLossCount: response.statistics.focus_loss_count,
+          pasteBlockedCount: response.statistics.paste_blocked_count,
+          selectAllBlockedCount: response.statistics.select_all_blocked_count,
+          copyBlockedCount: response.statistics.copy_blocked_count,
+          dropBlockedCount: response.statistics.drop_blocked_count,
+        },
+        timeline: {
+          createdAt: response.timeline.created_at,
+          oralStartedAt: response.timeline.oral_started_at,
+          oralCompletedAt: response.timeline.oral_completed_at,
+          answeringStartedAt: response.timeline.answering_started_at,
+          answeringCompletedAt: response.timeline.answering_completed_at,
+          completedAt: response.timeline.completed_at,
+        },
+        questions: response.questions.map((question) => ({
+          questionId: question.question_id,
+          question: question.question,
+          minimumLength: question.minimum_length,
+          maximumLength: question.maximum_length,
+        })),
+        answers: response.answers.map((answer) => ({
+          questionId: answer.question_id,
+          answer: answer.answer,
+        })),
+        video: {
+          status: response.video.status,
+          recordingMimeType: response.video.recording_mime_type,
+          recordingSize: response.video.recording_size,
+        },
+      })
+    ),
+  getVerificationRecording: (submissionId: string) =>
+    unwrap<VerificationRecordingResponse>(
+      apiClient.get(`/assessment/submissions/${submissionId}/verification-recording`)
+    ).then(
+      (response): VerificationRecordingAccess => ({
+        recordingUrl: response.recording_url,
+        expiresIn: response.expires_in,
       })
     ),
 };

@@ -11,6 +11,23 @@ export function useGradingSubmission(submissionId: string, challengeId?: string 
   });
 }
 
+export function useVerificationSummary(submissionId: string) {
+  return useQuery({
+    queryKey: ['assessment', 'verification-summary', submissionId],
+    queryFn: () => assessmentAPI.getVerificationSummary(submissionId),
+    enabled: Boolean(submissionId),
+  });
+}
+
+export function useVerificationDashboard(submissionId: string) {
+  return useQuery({
+    queryKey: ['assessment', 'verification-dashboard', submissionId],
+    queryFn: () => assessmentAPI.getVerificationDashboard(submissionId),
+    enabled: Boolean(submissionId),
+    retry: false,
+  });
+}
+
 export function useEvaluateSubmission() {
   const queryClient = useQueryClient();
 

@@ -199,3 +199,59 @@ export interface VerificationCompletion {
   verificationId: string;
   status: VerificationStatus;
 }
+
+export type VerificationSummaryStatus = VerificationStatus | 'NotStarted';
+export type VerificationScanStatus =
+  | 'NOT_STARTED'
+  | 'PENDING'
+  | 'SAFE'
+  | 'REJECTED'
+  | 'SCAN_FAILED';
+
+export interface VerificationSummary {
+  status: VerificationSummaryStatus;
+  completedAt: string | null;
+  questionCount: number;
+  scanStatus: VerificationScanStatus;
+}
+
+export interface VerificationDashboardStatistics {
+  questionCount: number;
+  selectedOralDurationSeconds: number;
+  actualOralDurationSeconds: number | null;
+  cameraInterruptionCount: number;
+  cameraInterruptionDurationSeconds: number;
+  focusLossCount: number;
+  pasteBlockedCount: number;
+  selectAllBlockedCount: number;
+  copyBlockedCount: number;
+  dropBlockedCount: number;
+}
+
+export interface VerificationDashboardTimeline {
+  createdAt: string;
+  oralStartedAt: string | null;
+  oralCompletedAt: string | null;
+  answeringStartedAt: string | null;
+  answeringCompletedAt: string | null;
+  completedAt: string | null;
+}
+
+export interface VerificationDashboard {
+  verificationId: string;
+  status: VerificationStatus;
+  statistics: VerificationDashboardStatistics;
+  timeline: VerificationDashboardTimeline;
+  questions: VerificationQuestion[];
+  answers: VerificationAnswer[];
+  video: {
+    status: 'Ready';
+    recordingMimeType: string | null;
+    recordingSize: number | null;
+  };
+}
+
+export interface VerificationRecordingAccess {
+  recordingUrl: string;
+  expiresIn: number;
+}

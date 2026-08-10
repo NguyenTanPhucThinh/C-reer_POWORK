@@ -6,9 +6,15 @@ import {
   DocumentViewer,
   RubricScoringForm,
   SubmissionContentViewer,
+  VerificationSummaryCard,
 } from '@/components/assessment';
 import { Badge, Button } from '@/components/ui';
-import { useEvaluateSubmission, useGradingSubmission, useUnlockSubmission } from '@/lib/hooks';
+import {
+  useEvaluateSubmission,
+  useGradingSubmission,
+  useUnlockSubmission,
+  useVerificationSummary,
+} from '@/lib/hooks';
 import { useAddToTalentPool } from '../../../../../lib/hooks/useTalentPool'; // Import useAddToTalentPool hook
 import { cn } from '@/lib/utils/cn';
 import type { UseMutationResult } from '@tanstack/react-query'; // Import UseMutationResult for typing
@@ -384,6 +390,7 @@ function GradeSubmissionWorkspace({ submission }: { submission: GradingSubmissio
   const evaluateMutation = useEvaluateSubmission();
   const unlockMutation = useUnlockSubmission();
   const addToTalentPoolMutation = useAddToTalentPool(); // Instantiate hook
+  const verificationSummary = useVerificationSummary(submission.submission_id);
   const [activeDocIndex, setActiveDocIndex] = useState(0);
   const [evaluationResult, setEvaluationResult] = useState<EvaluateResponse | null>(null);
   const [unlockResult, setUnlockResult] = useState<UnlockResponse | null>(null);
@@ -475,6 +482,15 @@ function GradeSubmissionWorkspace({ submission }: { submission: GradingSubmissio
           </div>
         </div>
       </header>
+
+      <VerificationSummaryCard
+        summary={verificationSummary.data}
+        isLoading={verificationSummary.isLoading}
+        isError={verificationSummary.isError}
+        isUnlocked={isUnlocked}
+        onRetry={() => void verificationSummary.refetch()}
+        submissionId={submission.submission_id}
+      />
 
       {notice && (
         <p className="shrink-0 rounded-lg border-hairline border-[rgba(34,197,94,0.35)] bg-success-bg px-4 py-2 text-xs text-success">
