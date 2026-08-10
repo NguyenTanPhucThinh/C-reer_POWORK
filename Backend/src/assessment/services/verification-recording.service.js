@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 
-import minioClient from '../../shared/config/minio.js'
+import r2Client from '../../shared/config/r2.js'
 import { config } from '../../shared/config/index.js'
 import prisma from '../../shared/config/prisma.js'
 import { AppError } from '../../shared/utils/AppError.js'
@@ -38,11 +38,7 @@ const DASHBOARD_SELECT = {
 export const createVerificationRecordingObjectKey = () => `verifications/${randomUUID()}.webm`
 
 const createPresignedUrl = (objectKey) =>
-  minioClient.presignedPutObject(
-    config.minio.bucket,
-    objectKey,
-    config.minio.presignedExpirySeconds,
-  )
+  r2Client.presignedPutObject(config.r2.bucket, objectKey, config.r2.presignedExpirySeconds)
 
 const loadVerification = (verificationId, database) =>
   database.submissionVerification.findUnique({
@@ -82,7 +78,7 @@ const assertAccess = (verification, userId, now) => {
 const toUpload = async (objectKey, presign) => ({
   uploadUrl: await presign(objectKey),
   objectKey,
-  expiresIn: config.minio.presignedExpirySeconds,
+  expiresIn: config.r2.presignedExpirySeconds,
 })
 
 export const createVerificationRecordingUpload = async (
@@ -157,7 +153,7 @@ const statRecording = async (objectKey, statObject) => {
   }
 }
 
-const defaultStatObject = (objectKey) => minioClient.statObject(config.minio.bucket, objectKey)
+const defaultStatObject = (objectKey) => r2Client.statObject(config.r2.bucket, objectKey)
 
 export const scanVerificationRecording = async (
   verificationId,
@@ -279,11 +275,7 @@ export const getVerificationDashboard = async (submissionId, companyId, database
 }
 
 const createRecordingDownloadUrl = (objectKey) =>
-  minioClient.presignedGetObject(
-    config.minio.bucket,
-    objectKey,
-    config.minio.presignedExpirySeconds,
-  )
+  r2Client.presignedGetObject(config.r2.bucket, objectKey, config.r2.presignedExpirySeconds)
 
 export const getVerificationRecording = async (
   submissionId,
@@ -302,7 +294,7 @@ export const getVerificationRecording = async (
   }
   return {
     recordingUrl: await presign(verification.recordingObjectKey),
-    expiresIn: config.minio.presignedExpirySeconds,
+    expiresIn: config.r2.presignedExpirySeconds,
   }
 }
 

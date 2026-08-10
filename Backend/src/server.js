@@ -2,7 +2,7 @@ import 'dotenv/config'
 import app from './app.js'
 import { config } from './shared/config/index.js'
 import prisma from './shared/config/prisma.js'
-import { ensureBucketExists } from './shared/config/minio.js'
+import { ensureR2BucketExists } from './shared/config/r2.js'
 
 const knownDevelopmentJwtSecrets = new Set([
   'powork_super_secret_dev_2026',
@@ -27,9 +27,9 @@ const start = async () => {
   }
 
   try {
-    await ensureBucketExists()
+    await ensureR2BucketExists()
   } catch (err) {
-    console.error('❌ MinIO not available - backend cannot start:', err.message)
+    console.error('❌ Cloudflare R2 not available - backend cannot start:', err.message)
     process.exit(1)
   }
 

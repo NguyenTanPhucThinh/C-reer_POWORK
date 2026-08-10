@@ -4,14 +4,6 @@ const parseInteger = (value, fallback) => {
   return Number.isNaN(parsedValue) ? fallback : parsedValue
 }
 
-const parseBoolean = (value, fallback = false) => {
-  if (value === undefined || value === null || value === '') {
-    return fallback
-  }
-
-  return ['1', 'true', 'yes', 'on'].includes(String(value).toLowerCase())
-}
-
 export const config = {
   port: parseInteger(process.env.PORT, 3000),
   nodeEnv: process.env.NODE_ENV || 'development',
@@ -30,14 +22,12 @@ export const config = {
     pass: process.env.SMTP_PASS || '',
     from: process.env.MAIL_FROM || 'POWORK <no-reply@powork.vn>',
   },
-  minio: {
-    endpoint: process.env.MINIO_ENDPOINT || 'localhost',
-    port: parseInteger(process.env.MINIO_PORT, 9000),
-    useSSL: parseBoolean(process.env.MINIO_USE_SSL, false),
-    accessKey: process.env.MINIO_ACCESS_KEY || '',
-    secretKey: process.env.MINIO_SECRET_KEY || '',
-    bucket: process.env.MINIO_BUCKET || 'powork-submissions',
-    presignedExpirySeconds: parseInteger(process.env.MINIO_PRESIGNED_EXPIRY, 300),
+  r2: {
+    endpoint: process.env.R2_ENDPOINT || '',
+    accessKeyId: process.env.R2_ACCESS_KEY_ID || '',
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || '',
+    bucket: process.env.R2_BUCKET || '',
+    presignedExpirySeconds: parseInteger(process.env.R2_PRESIGNED_EXPIRY, 300),
   },
   clamav: {
     host: process.env.CLAMAV_HOST || 'localhost',

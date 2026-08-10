@@ -224,7 +224,7 @@ test('recording URL is short-lived and signed only for the stored READY object',
   })
 
   assert.deepEqual(signedKeys, [objectKey])
-  assert.equal(result.expiresIn, config.minio.presignedExpirySeconds)
+  assert.equal(result.expiresIn, config.r2.presignedExpirySeconds)
   assert.equal(result.expiresIn, 300)
   assert.match(result.recordingUrl, /signature=short-lived/)
 })

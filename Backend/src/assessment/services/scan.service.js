@@ -1,21 +1,21 @@
 /**
  * ASSESSMENT MODULE — Scan Service
  *
- * Tải file từ MinIO về buffer tạm, đưa qua ClamAV để quét.
+ * Tải file từ R2 về dưới dạng stream, đưa qua ClamAV để quét.
  * Nếu phát hiện mã độc → cập nhật Submission.status = 'REJECTED',
  * KHÔNG cho phép Employer xem được file này.
  */
-import minioClient from '../../shared/config/minio.js'
+import r2Client from '../../shared/config/r2.js'
 import { getClamScan } from '../../shared/config/clamav.js'
 import { config } from '../../shared/config/index.js'
 import * as submissionRepository from '../repositories/submission.repository.js'
 
-// Quét 1 file theo object_key trong MinIO — trả về { isInfected, viruses }
+// Quét 1 file theo object_key trong R2 — trả về { isInfected, viruses }
 export const scanObjectForVirus = async (objectKey) => {
   const clamscan = await getClamScan()
 
   // Lấy file dưới dạng stream để quét trực tiếp, không cần tải hẳn xuống disk
-  const stream = await minioClient.getObject(config.minio.bucket, objectKey)
+  const stream = await r2Client.getObject(config.r2.bucket, objectKey)
   const { isInfected, viruses } = await clamscan.scanStream(stream)
 
   return { isInfected, viruses }

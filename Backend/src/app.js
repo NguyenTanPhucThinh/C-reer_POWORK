@@ -6,7 +6,7 @@ import morgan from 'morgan'
 
 import prisma from './shared/config/prisma.js'
 import { checkClamavReady } from './shared/config/clamav.js'
-import { checkMinioReady } from './shared/config/minio.js'
+import { checkR2Ready } from './shared/config/r2.js'
 import { errorHandler, notFoundHandler } from './shared/middlewares/error.middleware.js'
 import authRoutes from './iam/routes/auth.routes.js'
 import challengeRoutes from './challenge/routes/challenge.routes.js'
@@ -53,7 +53,7 @@ app.use(passport.initialize())
 
 // ─── Health Check ─────────────────────────────────────────────────────────────
 app.get('/health', async (req, res) => {
-  const [databaseResult, minioResult, clamavResult] = await Promise.all([
+  const [databaseResult, r2Result, clamavResult] = await Promise.all([
     withTimeout(
       prisma.$queryRaw`SELECT 1`
         .then(() => ({ ready: true }))
@@ -64,14 +64,14 @@ app.get('/health', async (req, res) => {
       'database',
     ),
     withTimeout(
-      checkMinioReady().then((result) => {
+      checkR2Ready().then((result) => {
         if (!result.ready) {
-          console.error('[health] minio probe failed', result.error)
+          console.error('[health] R2 probe failed', result.error)
         }
 
         return { ready: result.ready }
       }),
-      'minio',
+      'r2',
     ),
     withTimeout(
       checkClamavReady().then((result) => {
@@ -85,7 +85,7 @@ app.get('/health', async (req, res) => {
     ),
   ])
 
-  const ready = databaseResult.ready && minioResult.ready && clamavResult.ready
+  const ready = databaseResult.ready && r2Result.ready && clamavResult.ready
 
   res.status(ready ? 200 : 503).json({
     status: ready ? 'ok' : 'degraded',
@@ -93,7 +93,7 @@ app.get('/health', async (req, res) => {
     timestamp: new Date().toISOString(),
     checks: {
       database: databaseResult.ready ? 'ready' : 'degraded',
-      minio: minioResult.ready ? 'ready' : 'degraded',
+      r2: r2Result.ready ? 'ready' : 'degraded',
       clamav: clamavResult.ready ? 'ready' : 'degraded',
     },
   })

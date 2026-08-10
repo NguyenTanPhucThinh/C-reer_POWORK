@@ -46,13 +46,11 @@ services:
       DATABASE_URL: ${DATABASE_URL:-postgresql://powork_user:powork_pass@postgres:5432/powork_db}
       JWT_SECRET: ${JWT_SECRET:-powork_super_secret_dev_2026}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
-      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-minio}
-      MINIO_PORT: ${MINIO_PORT:-9000}
-      MINIO_USE_SSL: ${MINIO_USE_SSL:-false}
-      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-admin}
-      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-admin123}
-      MINIO_BUCKET: ${MINIO_BUCKET:-powork-submissions}
-      MINIO_PRESIGNED_EXPIRY: ${MINIO_PRESIGNED_EXPIRY:-300}
+      R2_ENDPOINT: ${R2_ENDPOINT:-}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
+      R2_BUCKET: ${R2_BUCKET:-}
+      R2_PRESIGNED_EXPIRY: ${R2_PRESIGNED_EXPIRY:-300}
       CLAMAV_HOST: ${CLAMAV_HOST:-clamav}
       CLAMAV_PORT: ${CLAMAV_PORT:-3310}
       SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
@@ -73,8 +71,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy # Chỉ chạy Backend khi PostgreSQL đã hoàn toàn sẵn sàng
-      minio:
-        condition: service_started
       clamav:
         condition: service_healthy
 
@@ -102,22 +98,6 @@ services:
       backend:
         condition: service_healthy
 
-  # 4. Dịch vụ MinIO (Object Storage)
-  minio:
-    image: minio/minio
-    platform: linux/amd64
-    container_name: powork_minio
-    restart: unless-stopped
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-admin}
-      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-admin123}
-    command: server /data --console-address ":9001"
-    volumes:
-      - minio_data:/data
-
   clamav:
     image: clamav/clamav
     container_name: powork_clamav
@@ -127,4 +107,3 @@ services:
 
 volumes:
   postgres_data:
-  minio_data:

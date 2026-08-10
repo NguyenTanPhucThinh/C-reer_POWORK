@@ -4,10 +4,10 @@
  * Theo API_Contracts mục 3.3:
  *   [GET] /assessment/challenges/{challenge_id}/presigned-url
  *
- * Flow: FE xin URL tạm → FE tự PUT file thẳng lên MinIO (không qua Backend)
+ * Flow: FE xin URL tạm → FE tự PUT file thẳng lên R2 (không qua Backend)
  *       → Controller trả object_key để dùng cho bước confirm submission sau
  */
-import minioClient from '../../shared/config/minio.js'
+import r2Client from '../../shared/config/r2.js'
 import { config } from '../../shared/config/index.js'
 import { randomUUID } from 'node:crypto'
 import path from 'node:path'
@@ -35,18 +35,18 @@ export const isSubmissionObjectKey = (objectKey, challengeId) => {
 export const generatePresignedUploadUrl = async ({ challengeId, filename }) => {
   const objectKey = createSubmissionObjectKey(challengeId, filename)
 
-  const uploadUrl = await minioClient.presignedPutObject(
-    config.minio.bucket,
+  const uploadUrl = await r2Client.presignedPutObject(
+    config.r2.bucket,
     objectKey,
-    config.minio.presignedExpirySeconds,
+    config.r2.presignedExpirySeconds,
   )
 
   return {
     uploadUrl,
     objectKey,
-    expiresIn: config.minio.presignedExpirySeconds,
+    expiresIn: config.r2.presignedExpirySeconds,
   }
 }
 
 export const assertSubmissionObjectExists = (objectKey) =>
-  minioClient.statObject(config.minio.bucket, objectKey)
+  r2Client.statObject(config.r2.bucket, objectKey)
