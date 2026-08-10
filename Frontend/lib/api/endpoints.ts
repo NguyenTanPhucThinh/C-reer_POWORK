@@ -29,6 +29,9 @@ import type {
   VerificationRecordingUpload,
   CompleteVerificationInput,
   VerificationCompletion,
+  VerificationSummary,
+  VerificationSummaryStatus,
+  VerificationScanStatus,
 } from '@/lib/types';
 
 interface VerificationSessionResponse {
@@ -60,6 +63,13 @@ interface VerificationRecordingUploadResponse {
 interface VerificationCompletionResponse {
   verification_id: string;
   verification_status: VerificationStatus;
+}
+
+interface VerificationSummaryResponse {
+  verification_status: VerificationSummaryStatus;
+  completed_at: string | null;
+  question_count: number;
+  scan_status: VerificationScanStatus;
 }
 
 const toVerificationSession = (response: VerificationSessionResponse): VerificationSession => ({
@@ -174,6 +184,17 @@ export const assessmentAPI = {
       (response): VerificationCompletion => ({
         verificationId: response.verification_id,
         status: response.verification_status,
+      })
+    ),
+  getVerificationSummary: (submissionId: string) =>
+    unwrap<VerificationSummaryResponse>(
+      apiClient.get(`/assessment/submissions/${submissionId}/verification-summary`)
+    ).then(
+      (response): VerificationSummary => ({
+        status: response.verification_status,
+        completedAt: response.completed_at,
+        questionCount: response.question_count,
+        scanStatus: response.scan_status,
       })
     ),
 };

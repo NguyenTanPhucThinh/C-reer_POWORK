@@ -199,3 +199,18 @@ export interface VerificationCompletion {
   verificationId: string;
   status: VerificationStatus;
 }
+
+export type VerificationSummaryStatus = VerificationStatus | 'NotStarted';
+export type VerificationScanStatus =
+  | 'NOT_STARTED'
+  | 'PENDING'
+  | 'SAFE'
+  | 'REJECTED'
+  | 'SCAN_FAILED';
+
+export interface VerificationSummary {
+  status: VerificationSummaryStatus;
+  completedAt: string | null;
+  questionCount: number;
+  scanStatus: VerificationScanStatus;
+}
