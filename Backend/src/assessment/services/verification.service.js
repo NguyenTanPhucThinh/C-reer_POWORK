@@ -81,6 +81,7 @@ const findOwnedSubmission = async (submissionId, userId, database) => {
     select: {
       id: true,
       fileStatus: true,
+      submissionMethod: true,
       identityMapping: { select: { userId: true } },
       verification: { select: SESSION_SELECT },
     },
@@ -91,7 +92,10 @@ const findOwnedSubmission = async (submissionId, userId, database) => {
   if (submission.identityMapping?.userId !== userId) {
     throw new AppError('Bạn không có quyền xác thực Submission này.', 403, 'VERIFICATION_FORBIDDEN')
   }
-  if (!SUBMITTED_FILE_STATUSES.has(submission.fileStatus)) {
+  if (
+    submission.submissionMethod !== 'TEXT' &&
+    !SUBMITTED_FILE_STATUSES.has(submission.fileStatus)
+  ) {
     throw new AppError(
       'Submission chưa ở trạng thái có thể xác thực.',
       409,

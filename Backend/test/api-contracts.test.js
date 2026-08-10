@@ -27,8 +27,11 @@ test('public API accepts only the documented snake_case contracts', async () => 
   assert.equal(updateChallengeStatusSchema.safeParse({ status: 'OPEN' }).success, false)
 
   assert.equal(
-    createSubmissionSchema.safeParse({ challenge_id: crypto.randomUUID(), solution_url: 'key' })
-      .success,
+    createSubmissionSchema.safeParse({
+      challenge_id: crypto.randomUUID(),
+      submission_method: 'FILE',
+      solution_url: 'key',
+    }).success,
     true,
   )
   assert.equal(

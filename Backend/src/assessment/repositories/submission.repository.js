@@ -19,8 +19,8 @@ export const findOrCreateIdentityMapping = ({ hashId, userId, challengeId }, dat
 }
 
 // Lấy version cao nhất hiện tại của 1 hash_id — để tự tăng version tiếp theo
-export const getLatestVersion = async (hashId) => {
-  const latest = await prisma.submission.findFirst({
+export const getLatestVersion = async (hashId, database = prisma) => {
+  const latest = await database.submission.findFirst({
     where: { hashId },
     orderBy: { version: 'desc' },
   })
@@ -29,7 +29,16 @@ export const getLatestVersion = async (hashId) => {
 
 // Tạo Submission mới với version đã tính — KHÔNG có cột user_id
 export const createSubmission = (
-  { challengeId, hashId, version, solutionUrl, fileStatus = 'AWAITING_UPLOAD' },
+  {
+    challengeId,
+    hashId,
+    version,
+    submissionMethod = 'FILE',
+    solutionUrl = null,
+    content = null,
+    contentFormat = null,
+    fileStatus = submissionMethod === 'FILE' ? 'AWAITING_UPLOAD' : null,
+  },
   database = prisma,
 ) => {
   return database.submission.create({
@@ -37,7 +46,10 @@ export const createSubmission = (
       challengeId,
       hashId,
       version,
+      submissionMethod,
       solutionUrl,
+      content,
+      contentFormat,
       status: 'PENDING',
       fileStatus,
     },
@@ -68,14 +80,19 @@ export const findSubmissionsByChallengeGroupedByHash = async (challengeId, datab
       hashId: true,
       isUnlocked: true,
       submissions: {
-        where: { fileStatus: 'SAFE' },
+        where: {
+          OR: [{ submissionMethod: 'TEXT' }, { submissionMethod: 'FILE', fileStatus: 'SAFE' }],
+        },
         orderBy: { version: 'desc' },
         select: {
           id: true,
           version: true,
           status: true,
+          submissionMethod: true,
           fileStatus: true,
           solutionUrl: true,
+          content: true,
+          contentFormat: true,
           submittedAt: true,
         },
       },

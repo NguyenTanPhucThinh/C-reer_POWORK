@@ -16,9 +16,18 @@ const fileStatusToApi = {
   SCAN_FAILED: 'ScanFailed',
 }
 
+const submissionMethodToApi = { FILE: 'File', TEXT: 'Text' }
+const contentFormatToApi = { RICH_TEXT: 'RichText', MARKDOWN: 'Markdown' }
+
 // POST /api/v1/assessment/submissions
 export const submitSolution = async (req, res) => {
-  const { challenge_id: challengeId, solution_url: solutionUrl } = req.body
+  const {
+    challenge_id: challengeId,
+    submission_method: submissionMethod,
+    solution_url: solutionUrl,
+    content,
+    content_format: contentFormat,
+  } = req.body
   const userId = req.user.userId // chỉ lấy từ JWT — blindAuditionGuard đã chặn FE gửi lên
 
   // Lấy title để đưa vào nội dung email xác nhận (không bắt buộc, chỉ làm đẹp email)
@@ -27,7 +36,10 @@ export const submitSolution = async (req, res) => {
   const result = await submissionService.submitSolution({
     userId,
     challengeId,
+    submissionMethod,
     solutionUrl,
+    content,
+    contentFormat,
     challengeTitle: challenge?.title,
   })
 
@@ -35,8 +47,10 @@ export const submitSolution = async (req, res) => {
     submission_id: result.submissionId,
     hash_id: result.hashId,
     version: result.version,
+    submission_method: submissionMethodToApi[result.submissionMethod],
+    content_format: result.contentFormat ? contentFormatToApi[result.contentFormat] : null,
     status: `${result.status[0]}${result.status.slice(1).toLowerCase()}`,
-    file_status: fileStatusToApi[result.fileStatus],
+    file_status: result.fileStatus ? fileStatusToApi[result.fileStatus] : null,
     submitted_at: result.submittedAt,
   })
 }
@@ -55,8 +69,13 @@ export const getSubmissionsByChallenge = async (req, res) => {
         submission_id: submission.submissionId,
         version: submission.version,
         status: `${submission.status[0]}${submission.status.slice(1).toLowerCase()}`,
-        file_status: fileStatusToApi[submission.fileStatus],
+        submission_method: submissionMethodToApi[submission.submissionMethod],
+        content_format: submission.contentFormat
+          ? contentFormatToApi[submission.contentFormat]
+          : null,
+        file_status: submission.fileStatus ? fileStatusToApi[submission.fileStatus] : null,
         solution_url: submission.solutionUrl,
+        content: submission.content,
         submitted_at: submission.submittedAt,
       })),
     })),

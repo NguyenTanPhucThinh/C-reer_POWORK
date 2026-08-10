@@ -102,15 +102,18 @@ model IdentityMapping {
 // Bảng CÔNG KHAI — employer xem khi chấm điểm
 // TUYỆT ĐỐI KHÔNG có cột user_id
 model Submission {
-  id             String           @id @default(uuid()) @map("submission_id")
-  challengeId    String           @map("challenge_id") // Lưu như data field
-  hashId         String           @map("hash_id")
-  version        Int              @default(1)
-  solutionUrl    String           @map("solution_url")
-  status         SubmissionStatus @default(PENDING)
-  fileStatus     FileScanStatus   @default(AWAITING_UPLOAD) @map("file_status")
-  generalComment String?          @map("general_comment")
-  submittedAt    DateTime         @default(now()) @map("submitted_at")
+  id               String                   @id @default(uuid()) @map("submission_id")
+  challengeId      String                   @map("challenge_id") // Lưu như data field
+  hashId           String                   @map("hash_id")
+  version          Int                      @default(1)
+  submissionMethod SubmissionMethod         @default(FILE) @map("submission_method")
+  solutionUrl      String?                  @map("solution_url")
+  content          String?                  @db.Text
+  contentFormat    SubmissionContentFormat? @map("content_format")
+  status           SubmissionStatus         @default(PENDING)
+  fileStatus       FileScanStatus?          @default(AWAITING_UPLOAD) @map("file_status")
+  generalComment   String?                  @map("general_comment")
+  submittedAt      DateTime                 @default(now()) @map("submitted_at")
 
   // Nối về bảng kín qua hash_id — không trực tiếp có user_id
   identityMapping   IdentityMapping         @relation(fields: [hashId], references: [hashId])
@@ -218,6 +221,16 @@ enum SubmissionStatus {
   EVALUATED
   APPROVED
   REJECTED
+}
+
+enum SubmissionMethod {
+  FILE
+  TEXT
+}
+
+enum SubmissionContentFormat {
+  RICH_TEXT
+  MARKDOWN
 }
 
 enum FileScanStatus {

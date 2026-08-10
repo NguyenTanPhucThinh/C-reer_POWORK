@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 
-import { assertSubmissionFileSafe } from '../src/assessment/services/ownership.service.js'
+import { assertSubmissionReviewable } from '../src/assessment/services/ownership.service.js'
 import { scanSubmission } from '../src/assessment/services/scan.service.js'
 import { evaluateSubmission } from '../src/assessment/services/evaluation.service.js'
 import { rejectSubmission, unlockCandidate } from '../src/assessment/services/submission.service.js'
@@ -93,11 +93,11 @@ test('ClamAV errors and indeterminate responses fail closed', async () => {
 test('Employer operations reject every file state except SAFE', async () => {
   for (const fileStatus of ['AWAITING_UPLOAD', 'PENDING_SCAN', 'REJECTED', 'SCAN_FAILED']) {
     assert.throws(
-      () => assertSubmissionFileSafe({ fileStatus }),
+      () => assertSubmissionReviewable({ fileStatus }),
       (error) => error?.statusCode === 409 && error?.errorCode === 'ASSESS_009',
     )
   }
-  assert.equal(assertSubmissionFileSafe({ fileStatus: 'SAFE' }).fileStatus, 'SAFE')
+  assert.equal(assertSubmissionReviewable({ fileStatus: 'SAFE' }).fileStatus, 'SAFE')
 })
 
 test('unsafe submission IDs cannot create Employer-side effects', async () => {
