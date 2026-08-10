@@ -8,5 +8,4 @@ export {
   VerificationTimelineSection,
   VerificationStatisticsSection,
   VerificationQuestionAnswersSection,
-  VerificationVideoStatusSection,
 } from './VerificationDashboardSections';

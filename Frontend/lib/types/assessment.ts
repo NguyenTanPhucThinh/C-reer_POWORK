@@ -250,3 +250,8 @@ export interface VerificationDashboard {
     recordingSize: number | null;
   };
 }
+
+export interface VerificationRecordingAccess {
+  recordingUrl: string;
+  expiresIn: number;
+}

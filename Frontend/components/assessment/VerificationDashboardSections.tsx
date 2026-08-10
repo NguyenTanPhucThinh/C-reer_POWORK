@@ -159,33 +159,3 @@ export function VerificationQuestionAnswersSection({
     </section>
   );
 }
-
-export function VerificationVideoStatusSection({
-  video,
-}: {
-  video: VerificationDashboard['video'];
-}) {
-  const size = video.recordingSize
-    ? `${(video.recordingSize / 1024 / 1024).toFixed(2)} MB`
-    : 'Chưa xác định';
-  return (
-    <section className="rounded-2xl border border-border-secondary bg-background-secondary p-5">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-foreground">Video status</h2>
-          <p className="mt-1 text-xs leading-5 text-foreground-secondary">
-            Video đã vượt qua kiểm tra an toàn. Trình phát sẽ được nối ở bước tiếp theo.
-          </p>
-        </div>
-        <div className="flex gap-2 text-xs">
-          <span className="rounded-full border border-success/35 bg-success-bg px-3 py-1.5 font-semibold text-success">
-            {video.status}
-          </span>
-          <span className="rounded-full border border-border-secondary bg-background px-3 py-1.5 text-foreground-secondary">
-            {video.recordingMimeType ?? 'Không rõ MIME'} · {size}
-          </span>
-        </div>
-      </div>
-    </section>
-  );
-}

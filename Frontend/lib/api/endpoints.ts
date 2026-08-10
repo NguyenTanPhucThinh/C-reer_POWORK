@@ -33,6 +33,7 @@ import type {
   VerificationSummaryStatus,
   VerificationScanStatus,
   VerificationDashboard,
+  VerificationRecordingAccess,
 } from '@/lib/types';
 
 interface VerificationSessionResponse {
@@ -108,6 +109,11 @@ interface VerificationDashboardResponse {
     recording_mime_type: string | null;
     recording_size: number | null;
   };
+}
+
+interface VerificationRecordingResponse {
+  recording_url: string;
+  expires_in: number;
 }
 
 const toVerificationSession = (response: VerificationSessionResponse): VerificationSession => ({
@@ -278,6 +284,15 @@ export const assessmentAPI = {
           recordingMimeType: response.video.recording_mime_type,
           recordingSize: response.video.recording_size,
         },
+      })
+    ),
+  getVerificationRecording: (submissionId: string) =>
+    unwrap<VerificationRecordingResponse>(
+      apiClient.get(`/assessment/submissions/${submissionId}/verification-recording`)
+    ).then(
+      (response): VerificationRecordingAccess => ({
+        recordingUrl: response.recording_url,
+        expiresIn: response.expires_in,
       })
     ),
 };

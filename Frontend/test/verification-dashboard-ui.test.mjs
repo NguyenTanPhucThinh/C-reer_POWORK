@@ -21,10 +21,10 @@ test('unlocked Employer dashboard renders every evidence area from the protected
     'VerificationTimelineSection',
     'VerificationStatisticsSection',
     'VerificationQuestionAnswersSection',
-    'VerificationVideoStatusSection',
   ]) {
     assert.match(page, new RegExp(section));
     assert.match(sections, new RegExp(`function ${section}`));
   }
+  assert.match(page, /EmployerVerificationVideoPlayer/);
   assert.doesNotMatch(page, /mock/i);
 });

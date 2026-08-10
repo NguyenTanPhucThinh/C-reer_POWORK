@@ -7,10 +7,10 @@ import {
   VerificationQuestionAnswersSection,
   VerificationStatisticsSection,
   VerificationTimelineSection,
-  VerificationVideoStatusSection,
 } from '@/components/assessment';
 import { Button } from '@/components/ui';
 import { useVerificationDashboard } from '@/lib/hooks';
+import { EmployerVerificationVideoPlayer } from './_components/EmployerVerificationVideoPlayer';
 
 const getSubmissionId = (value: string | string[] | undefined) =>
   Array.isArray(value) ? (value[0] ?? '') : (value ?? '');
@@ -93,7 +93,7 @@ export default function EmployerVerificationDashboardPage() {
         questions={dashboard.data.questions}
         answers={dashboard.data.answers}
       />
-      <VerificationVideoStatusSection video={dashboard.data.video} />
+      <EmployerVerificationVideoPlayer submissionId={submissionId} video={dashboard.data.video} />
     </main>
   );
 }
