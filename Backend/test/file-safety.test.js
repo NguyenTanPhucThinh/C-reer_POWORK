@@ -28,7 +28,7 @@ const runScan = async (scan) => {
     },
   }
 
-  await scanSubmission(submission.id, { repository, scan })
+  await scanSubmission(submission.id, { repository, scan, notify: async () => {} })
   return writes
 }
 
@@ -88,6 +88,53 @@ test('ClamAV errors and indeterminate responses fail closed', async () => {
 
   assert.deepEqual(failed, [{ fileStatus: 'SCAN_FAILED' }])
   assert.deepEqual(indeterminate, [{ fileStatus: 'SCAN_FAILED' }])
+})
+
+test('Candidate is notified only after the scan reaches a final accepted or rejected result', async () => {
+  const notifications = []
+  const repository = {
+    findSubmissionById: async () => submission,
+    updateSubmissionScanResult: async (_id, data) => ({ ...submission, ...data }),
+  }
+  const notify = async (...args) => notifications.push(args)
+
+  await scanSubmission(submission.id, {
+    repository,
+    scan: async () => ({ isInfected: false, viruses: [] }),
+    notify,
+  })
+  await scanSubmission(submission.id, {
+    repository,
+    scan: async () => ({ isInfected: true, viruses: ['Eicar-Signature'] }),
+    notify,
+  })
+
+  assert.deepEqual(notifications[0], [submission.id, 'ACCEPTED', undefined])
+  assert.equal(notifications[1][0], submission.id)
+  assert.equal(notifications[1][1], 'REJECTED')
+  assert.match(notifications[1][2], /Eicar-Signature/)
+})
+
+test('email failure cannot change a successfully scanned file into SCAN_FAILED', async () => {
+  const writes = []
+  const repository = {
+    findSubmissionById: async () => submission,
+    updateSubmissionScanResult: async (_id, data) => {
+      writes.push(data)
+      return { ...submission, ...data }
+    },
+  }
+
+  const result = await scanSubmission(submission.id, {
+    repository,
+    scan: async () => ({ isInfected: false, viruses: [] }),
+    notify: async () => {
+      throw new Error('SMTP unavailable')
+    },
+  })
+
+  assert.equal(result.fileStatus, 'SAFE')
+  assert.deepEqual(writes, [{ fileStatus: 'SAFE' }])
 })
 
 test('Employer operations reject every file state except SAFE', async () => {
