@@ -46,7 +46,7 @@ POWORK được thiết kế theo kiến trúc **Modular Monolith** kết hợp 
 - **ORM:** Prisma (Type-safe query, Interactive Transactions chống Race Condition).
 
 ### Infrastructure & Security
-- **Object Storage:** MinIO (Tải/Upload file dung lượng lớn trực tiếp qua Presigned URL, giải phóng băng thông cho server API).
+- **Object Storage:** Cloudflare R2 (Tải/Upload file trực tiếp qua Presigned URL, không đi qua băng thông Backend).
 - **Anti-Malware:** ClamAV (Quét mã độc luồng dữ liệu tự động).
 - **Containerization:** Docker & Docker Compose.
 - **CI/CD:** GitHub Actions (Tự động Linting, Build test và kiểm định cấu trúc Database).
@@ -61,7 +61,31 @@ Dự án đã được cấu hình sẵn các tệp lệnh để khởi động 
    cd "Project Github"
    ```
 
-2. **Khởi động môi trường:**
+2. **Cấu hình môi trường:**
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   Tạo private Cloudflare R2 bucket và API token có quyền Object Read & Write,
+   sau đó điền các biến `R2_*` trong `.env`. Mỗi môi trường phải dùng bucket riêng,
+   ví dụ `powork-development`, `powork-staging` và `powork-production`.
+
+   Cấu hình CORS của bucket phải cho phép chính xác origin Frontend:
+
+   ```json
+   [
+     {
+       "AllowedOrigins": ["https://<codespace>-3000.app.github.dev"],
+       "AllowedMethods": ["GET", "PUT", "HEAD"],
+       "AllowedHeaders": ["Content-Type"],
+       "ExposeHeaders": ["ETag"],
+       "MaxAgeSeconds": 3600
+     }
+   ]
+   ```
+
+3. **Khởi động môi trường:**
 
    - **Dành cho Windows:**
      ```cmd
@@ -73,7 +97,7 @@ Dự án đã được cấu hình sẵn các tệp lệnh để khởi động 
      docker compose up --build -d
      ```
 
-3. **Truy cập:**
+4. **Truy cập:**
    - Giao diện người dùng (Frontend): `http://localhost:3000`
    - Máy chủ API (Backend): `http://localhost:3001`
 

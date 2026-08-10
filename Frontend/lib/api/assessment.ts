@@ -7,6 +7,7 @@ interface GetGradingSubmissionOptions {
 }
 
 function getDocumentsFromSummary(summary: SubmissionVersion): ReviewDocument[] {
+  if (!summary.solution_url) return [];
   const extension = summary.solution_url.match(/\.[a-z0-9]{1,10}$/i)?.[0] ?? '';
 
   return [
@@ -46,6 +47,9 @@ export async function getGradingSubmission({
     challenge_id: challenge.challenge_id,
     challenge_title: challenge.title,
     submitted_at: selectedSubmission.submitted_at,
+    submission_method: selectedSubmission.submission_method,
+    content_format: selectedSubmission.content_format,
+    content: selectedSubmission.content,
     solution_url: selectedSubmission.solution_url,
     criteria: challenge.rubrics,
     documents: getDocumentsFromSummary(selectedSubmission),

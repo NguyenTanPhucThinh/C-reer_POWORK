@@ -1,6 +1,8 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { isCandidateVerificationPath } from '@/lib/utils/helpers';
 
 type FooterVariant = 'full' | 'compact';
 
@@ -33,6 +35,10 @@ const linkGroups = [
 ];
 
 export function Footer({ variant = 'full' }: FooterProps) {
+  const pathname = usePathname();
+
+  if (isCandidateVerificationPath(pathname)) return null;
+
   if (variant === 'compact') {
     return (
       <footer

@@ -12,13 +12,9 @@ export const assertChallengeOwnership = (challenge, companyId) => {
   return challenge
 }
 
-export const assertSubmissionFileSafe = (submission) => {
-  if (submission.fileStatus !== 'SAFE') {
-    throw new AppError(
-      'File chưa vượt qua kiểm tra an toàn và không thể được truy cập.',
-      409,
-      'ASSESS_009',
-    )
+export const assertSubmissionReviewable = (submission) => {
+  if (submission.submissionMethod !== 'TEXT' && submission.fileStatus !== 'SAFE') {
+    throw new AppError('Bài nộp chưa sẵn sàng để đánh giá.', 409, 'ASSESS_009')
   }
   return submission
 }

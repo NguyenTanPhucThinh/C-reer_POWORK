@@ -10,10 +10,27 @@ export const presignedUrlQuerySchema = z.object({
 })
 
 // POST /assessment/submissions
-export const createSubmissionSchema = z.object({
+const submissionIdentity = {
   challenge_id: z.string().uuid('challenge_id phải là UUID hợp lệ'),
-  solution_url: z.string().min(1, 'solution_url (object_key) là bắt buộc'),
-})
+}
+
+export const createSubmissionSchema = z.discriminatedUnion('submission_method', [
+  z
+    .object({
+      ...submissionIdentity,
+      submission_method: z.literal('FILE'),
+      solution_url: z.string().min(1, 'solution_url (object_key) là bắt buộc'),
+    })
+    .strict(),
+  z
+    .object({
+      ...submissionIdentity,
+      submission_method: z.literal('TEXT'),
+      content_format: z.enum(['RICH_TEXT', 'MARKDOWN']),
+      content: z.string().trim().min(50).max(50000),
+    })
+    .strict(),
+])
 
 // POST /assessment/submissions/:submission_id/verification/start
 export const startVerificationSchema = z
