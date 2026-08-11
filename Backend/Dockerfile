@@ -1,5 +1,4 @@
-# Sử dụng base image Node.js v20 nhẹ và ổn định
-FROM node:20-slim AS builder
+FROM node:20-bookworm AS builder
 
 WORKDIR /app
 
@@ -12,15 +11,12 @@ RUN apt-get update -y \
 COPY package*.json ./
 COPY prisma ./prisma
 
-# Cài đặt toàn bộ dependencies (cần devDependencies để chạy prisma generate)
 RUN npm ci
-
-# Sinh Prisma Client
 RUN npx prisma generate
 
-# ----------------------------------------------------
-# Stage Runner: Tạo production image gọn nhẹ
-FROM node:20-slim AS runner
+COPY . .
+
+FROM node:20-bookworm
 
 WORKDIR /app
 
@@ -30,16 +26,12 @@ RUN apt-get update -y \
 
 ENV NODE_ENV=production
 
-# Copy thư mục node_modules chứa dependencies và Prisma Client đã sinh
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/prisma ./prisma
+RUN apt-get update && \
+    apt-get install -y openssl && \
+    rm -rf /var/lib/apt/lists/*
 
-# Copy source code của backend
-COPY . .
+COPY --from=builder /app ./
 
-# Cấu hình cổng chạy mặc định cho container là 3001
 EXPOSE 3001
-ENV PORT=3001
 
 CMD ["npm", "start"]

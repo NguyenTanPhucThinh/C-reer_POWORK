@@ -7,10 +7,12 @@ const parseInteger = (value, fallback) => {
 export const config = {
   port: parseInteger(process.env.PORT, 3000),
   nodeEnv: process.env.NODE_ENV || 'development',
+
   jwt: {
     secret: process.env.JWT_SECRET || '',
     expiresIn: process.env.JWT_EXPIRES_IN || '7d',
   },
+
   upload: {
     maxFileSizeMB: parseInteger(process.env.MAX_FILE_SIZE_MB, 10),
     dir: process.env.UPLOAD_DIR || './uploads',
