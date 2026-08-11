@@ -12,7 +12,7 @@ export function getTotalWeight(criteria: RubricCriteriaInput[]): number {
 export function isRubricValid(criteria: RubricCriteriaInput[]): boolean {
   if (criteria.length === 0) return false;
   const allValid = criteria.every(
-    (c) => c.criteria_name.trim().length > 0 && Number(c.max_score) > 0 && Number(c.weight) >= 0
+    (c) => c.criteria_name.trim().length > 0 && Number(c.max_score) > 0 && Number(c.weight) > 0
   );
   return allValid && getTotalWeight(criteria) === TOTAL_WEIGHT;
 }
@@ -35,7 +35,7 @@ export interface RubricScoreInput {
 
 /**
  * Tổng điểm thô (raw) — cộng trực tiếp điểm từng tiêu chí.
- * Khớp với logic mock backend `/evaluate`.
+ * Khớp với contract `/evaluate`: `total_score` là tổng điểm thô.
  */
 export function getRawTotalScore(rows: Pick<RubricScoreInput, 'score'>[]): number {
   return rows.reduce((sum, r) => sum + (Number(r.score) || 0), 0);

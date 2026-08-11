@@ -3,16 +3,16 @@ import { dynamicProfileAPI } from '@/lib/api/dynamic-profile';
 
 export function useCandidateProfile(userId: string) {
   return useQuery({
-    queryKey: ['candidate-profile'],
+    queryKey: ['candidate-profile', userId],
     queryFn: () => dynamicProfileAPI.getCandidateProfile(userId),
     enabled: Boolean(userId),
   });
 }
 
-export function useEvidenceDetail(evidenceId: string) {
+export function useEvidenceDetail(evidenceId: string, userId: string) {
   return useQuery({
-    queryKey: ['candidate-profile', 'evidence', evidenceId],
-    queryFn: () => dynamicProfileAPI.getEvidenceDetail(evidenceId),
-    enabled: Boolean(evidenceId),
+    queryKey: ['candidate-profile', userId, 'evidence', evidenceId],
+    queryFn: () => dynamicProfileAPI.getEvidenceDetail(evidenceId, userId),
+    enabled: Boolean(evidenceId && userId),
   });
 }

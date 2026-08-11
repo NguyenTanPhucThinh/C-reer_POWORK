@@ -7,32 +7,32 @@ interface ProfileStatsCardsProps {
 export function ProfileStatsCards({ profile }: ProfileStatsCardsProps) {
   const stats = [
     {
-      label: 'Total Challenges',
+      label: 'Tổng Challenge',
       value: profile.totalChallenges,
       tone: 'text-accent',
       icon: 'TC',
-      caption: 'Completed evidence',
+      caption: 'Bằng chứng đã hoàn thành',
     },
     {
-      label: 'Passed Challenges',
+      label: 'Challenge đã vượt',
       value: profile.passedChallenges,
       tone: 'text-success',
       icon: 'PC',
-      caption: 'Reviewed by employers',
+      caption: 'Đánh giá bởi nhà tuyển dụng',
     },
     {
-      label: 'Average Score',
+      label: 'Điểm trung bình',
       value: `${profile.averageScore}/100`,
       tone: 'text-info',
       icon: 'AS',
-      caption: 'Across verified work',
+      caption: 'Trên công việc đã xác thực',
     },
     {
-      label: 'Verified Skills',
+      label: 'Kỹ năng đã xác thực',
       value: profile.verifiedSkills.length,
       tone: 'text-warning',
       icon: 'VS',
-      caption: 'Rubric-backed signals',
+      caption: 'Tín hiệu theo rubric',
     },
   ];
 

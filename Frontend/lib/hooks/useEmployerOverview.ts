@@ -10,10 +10,9 @@ import type {
   OverviewTask,
   ReviewQueueItem,
 } from '@/lib/types/employerOverview';
-import type { SubmissionSummary } from '@/lib/types';
+import type { SubmissionGroup } from '@/lib/types';
 
-const PENDING_STATUSES = new Set(['Pending', 'PENDING']);
-const UNLOCKED_STATUSES = new Set(['Approved', 'APPROVED']);
+const PENDING_STATUS = 'Pending';
 const SESSION_NOW = Date.now();
 
 function isDeadlineSoon(deadline: string) {
@@ -34,17 +33,23 @@ export function useEmployerOverview() {
 
   const data = useMemo<EmployerOverviewData>(() => {
     const allSubmissions = challenges.flatMap((challenge, index) => {
-      const submissions = (submissionQueries[index]?.data ?? []) as SubmissionSummary[];
-      return submissions.map((submission) => ({ challenge, submission }));
+      const groups = (submissionQueries[index]?.data ?? []) as SubmissionGroup[];
+      return groups.flatMap((group) =>
+        group.submissions.map((submission) => ({
+          challenge,
+          submission,
+          hashId: group.hash_id,
+        }))
+      );
     });
 
     const reviewQueue: ReviewQueueItem[] = allSubmissions
-      .filter(({ submission }) => PENDING_STATUSES.has(submission.status))
-      .map(({ challenge, submission }) => ({
+      .filter(({ submission }) => submission.status === PENDING_STATUS)
+      .map(({ challenge, submission, hashId }) => ({
         submissionId: submission.submission_id,
         challengeId: challenge.challenge_id,
         challengeTitle: challenge.title,
-        candidateCode: submission.hash_id,
+        candidateCode: hashId,
         status: submission.status,
         submittedAt: submission.submitted_at,
       }))
@@ -62,12 +67,12 @@ export function useEmployerOverview() {
 
     const activities: OverviewActivity[] = allSubmissions
       .filter(({ submission }) => Boolean(submission.submitted_at))
-      .map(({ challenge, submission }) => ({
+      .map(({ challenge, submission, hashId }) => ({
         id: submission.submission_id,
         action: 'submissionReceived' as const,
-        actorName: `Candidate ${submission.hash_id.slice(0, 8)}`,
+        actorName: `Candidate ${hashId.slice(0, 8)}`,
         actorInitials: '••',
-        candidateCode: submission.hash_id,
+        candidateCode: hashId,
         subject: challenge.title,
         occurredAt: submission.submitted_at,
       }))
@@ -84,8 +89,8 @@ export function useEmployerOverview() {
   return {
     data,
     unlockedCount: challenges
-      .flatMap((_, index) => (submissionQueries[index]?.data ?? []) as SubmissionSummary[])
-      .filter((submission) => UNLOCKED_STATUSES.has(submission.status)).length,
+      .flatMap((_, index) => (submissionQueries[index]?.data ?? []) as SubmissionGroup[])
+      .filter((group) => group.is_unlocked).length,
     isLoading: challengesQuery.isLoading,
     isError: challengesQuery.isError,
     error: challengesQuery.error,

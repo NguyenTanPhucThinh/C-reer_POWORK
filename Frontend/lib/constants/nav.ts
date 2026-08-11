@@ -23,15 +23,16 @@ export interface NavItem {
  */
 export const NAV_BY_ROLE: Record<UserRole, NavItem[]> = {
   Candidate: [
-    { label: 'Overview', href: '/candidate/dashboard', icon: 'home' },
-    { label: 'Challenges', href: '/challenges', icon: 'challenge' },
-    { label: 'My Submissions', href: '/candidate/my-submissions', icon: 'submission' },
-    { label: 'Dynamic Profile', href: '/candidate/profile', icon: 'profile' },
+    { label: 'Tổng quan', href: '/candidate/dashboard', icon: 'home' },
+    { label: 'Thử thách', href: '/challenges', icon: 'challenge' },
+    { label: 'Bài nộp của tôi', href: '/candidate/my-submissions', icon: 'submission' },
+    { label: 'Hồ sơ động', href: '/candidate/profile', icon: 'profile' },
   ],
   Employer: [
-    { label: 'Overview', href: '/employer/dashboard', icon: 'home' },
-    { label: 'Challenges', href: '/challenges', icon: 'challenge' },
-    { label: 'Create Challenge', href: '/employer/challenges/create', icon: 'create' },
-    { label: 'Talent Pool', href: '/talent-pool', icon: 'talent' },
+    { label: 'Tổng quan', href: '/employer/dashboard', icon: 'home' },
+    { label: 'Bài nộp', href: '/employer/submissions', icon: 'submission' },
+    { label: 'Thử thách', href: '/challenges', icon: 'challenge' },
+    { label: 'Tạo thử thách', href: '/employer/challenges/create', icon: 'create' },
+    { label: 'Kho ứng viên', href: '/talent-pool', icon: 'talent' },
   ],
 };

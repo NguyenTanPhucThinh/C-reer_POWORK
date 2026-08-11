@@ -32,9 +32,9 @@ export const createChallengeWithRubrics = ({
       status: 'OPEN',
       rubricCriteria: {
         create: rubrics.map((r) => ({
-          criteriaName: r.criteria_name,
+          criteriaName: r.criteriaName,
           weight: r.weight,
-          maxScore: r.max_score,
+          maxScore: r.maxScore,
         })),
       },
     },

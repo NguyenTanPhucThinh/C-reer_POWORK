@@ -18,11 +18,11 @@ export function EvidenceTimeline({ evidences }: EvidenceTimelineProps) {
     >
       <div className="mb-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
         <div>
-          <p className="mb-1 text-xs font-medium text-accent">Timeline</p>
-          <h2 className="text-2xl font-semibold text-foreground">Career history</h2>
+          <p className="mb-1 text-xs font-medium text-accent">Dòng thời gian</p>
+          <h2 className="text-2xl font-semibold text-foreground">Lịch sử sự nghiệp</h2>
         </div>
         <p className="max-w-md text-sm leading-5 text-foreground-secondary">
-          A chronological record of completed challenges, verified skills, and reviewed work.
+          Lịch sử challenge đã hoàn thành, kỹ năng đã xác thực và bài làm đã chấm.
         </p>
       </div>
 

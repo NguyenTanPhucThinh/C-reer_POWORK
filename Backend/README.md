@@ -67,9 +67,9 @@ powork-backend/
 │   │   │   └── talent-pool.controller.js ← addToTalentPool, getTalentPool
 │   │   ├── routes/
 │   │   │   └── talent-pool.routes.js     ← /api/v1/talent-pool
-│   │   ├── services/                     
-│   │   ├── repositories/                 
-│   │   └── models/                       
+│   │   ├── services/
+│   │   ├── repositories/
+│   │   └── models/
 │   │
 │   ├── shared/                          ← Code dùng chung — KHÔNG chứa logic nghiệp vụ
 │   │   ├── config/
@@ -451,24 +451,23 @@ brew services stop postgresql
 > FE (Khoa) có thể gọi ngay sau khi `npm run dev` chạy thành công.  
 > **Tất cả field trong request/response dùng `snake_case`.**
 
-| Module | Prefix |
-|--------|--------|
-| IAM | `/api/v1/auth` |
-| Challenge | `/api/v1/challenges` |
-| Assessment | `/api/v1/assessment` |
-| Profile | `/api/v1/profiles` |
+| Module      | Prefix                |
+| ----------- | --------------------- |
+| IAM         | `/api/v1/auth`        |
+| Challenge   | `/api/v1/challenges`  |
+| Assessment  | `/api/v1/assessment`  |
+| Profile     | `/api/v1/profiles`    |
 | Talent Pool | `/api/v1/talent-pool` |
-
 
 ---
 
 ### IAM Module — `/api/v1/auth`
 
-| Method | Endpoint                | Body                                 | Mô tả                                             |
-| ------ | ----------------------- | ------------------------------------ | ------------------------------------------------- |
-| POST   | `/api/v1/auth/register` | `{email, password, role, full_name}` | Đăng ký (`role`: `"CANDIDATE"` hoặc `"EMPLOYER"`) |
-| POST   | `/api/v1/auth/login`    | `{email, password}`                  | Đăng nhập — trả về `access_token`                 |
-| GET    | `/api/v1/auth/me`       | —                                    | Xem thông tin user hiện tại (cần Bearer token)    |
+| Method | Endpoint                | Body                                                | Mô tả                                                                          |
+| ------ | ----------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------ |
+| POST   | `/api/v1/auth/register` | `{email, password, role, full_name, company_name?}` | Đăng ký (`role`: `"Candidate"` hoặc `"Employer"`; Employer cần `company_name`) |
+| POST   | `/api/v1/auth/login`    | `{email, password}`                                 | Đăng nhập — trả về `access_token`                                              |
+| GET    | `/api/v1/auth/me`       | —                                                   | Xem thông tin user hiện tại (cần Bearer token)                                 |
 
 **Response mẫu — login:**
 
@@ -517,6 +516,7 @@ brew services stop postgresql
 | POST   | `/api/v1/assessment/submissions`                          | `{challenge_id, solution_url}`   | CANDIDATE | Nộp bài — server tự sinh `hash_id`     |
 | GET    | `/api/v1/assessment/challenges/:challenge_id/submissions` | —                                | EMPLOYER  | Xem bài nộp **(chỉ thấy `hash_id`)**   |
 | POST   | `/api/v1/assessment/submissions/:submission_id/evaluate`  | `{evaluations, general_comment}` | EMPLOYER  | Chấm điểm theo từng `criteria_id`      |
+| POST   | `/api/v1/assessment/submissions/:submission_id/reject`    | —                                | EMPLOYER  | Từ chối bài nhưng vẫn giữ ẩn danh      |
 | POST   | `/api/v1/assessment/submissions/:submission_id/unlock`    | `{action: "APPROVE"}`            | EMPLOYER  | **Duy nhất lúc này mới thấy tên thật** |
 
 **Response mẫu — nộp bài** (không có `user_id`):
@@ -566,17 +566,17 @@ brew services stop postgresql
 | ------ | --------------------------- | ----------------------------------------------------------- |
 | GET    | `/api/v1/profiles/:user_id` | Xem Dynamic Profile công khai của ứng viên (không cần auth) |
 
-
 ---
 
 ### Talent Pool Module — `/api/v1/talent-pool`
 
-| Method | Endpoint | Body | Auth | Mô tả |
-|--------|----------|------|------|-------|
-| POST | `/api/v1/talent-pool` | `{user_id}` | EMPLOYER | Thêm ứng viên đã unlock vào danh sách theo dõi |
-| GET | `/api/v1/talent-pool` | — | EMPLOYER | Xem danh sách ứng viên trong Talent Pool |
+| Method | Endpoint              | Body        | Auth     | Mô tả                                          |
+| ------ | --------------------- | ----------- | -------- | ---------------------------------------------- |
+| POST   | `/api/v1/talent-pool` | `{user_id}` | EMPLOYER | Thêm ứng viên đã unlock vào danh sách theo dõi |
+| GET    | `/api/v1/talent-pool` | —           | EMPLOYER | Xem danh sách ứng viên trong Talent Pool       |
 
 **Response mẫu — GET /talent-pool:**
+
 ```json
 {
   "status": "success",

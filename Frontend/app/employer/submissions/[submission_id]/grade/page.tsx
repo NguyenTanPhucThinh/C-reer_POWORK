@@ -2,9 +2,19 @@
 
 import { useMemo, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
-import { DocumentViewer, RubricScoringForm } from '@/components/assessment';
+import {
+  DocumentViewer,
+  RubricScoringForm,
+  SubmissionContentViewer,
+  VerificationSummaryCard,
+} from '@/components/assessment';
 import { Badge, Button } from '@/components/ui';
-import { useEvaluateSubmission, useGradingSubmission, useUnlockSubmission } from '@/lib/hooks';
+import {
+  useEvaluateSubmission,
+  useGradingSubmission,
+  useUnlockSubmission,
+  useVerificationSummary,
+} from '@/lib/hooks';
 import { useAddToTalentPool } from '../../../../../lib/hooks/useTalentPool'; // Import useAddToTalentPool hook
 import { cn } from '@/lib/utils/cn';
 import type { UseMutationResult } from '@tanstack/react-query'; // Import UseMutationResult for typing
@@ -380,6 +390,7 @@ function GradeSubmissionWorkspace({ submission }: { submission: GradingSubmissio
   const evaluateMutation = useEvaluateSubmission();
   const unlockMutation = useUnlockSubmission();
   const addToTalentPoolMutation = useAddToTalentPool(); // Instantiate hook
+  const verificationSummary = useVerificationSummary(submission.submission_id);
   const [activeDocIndex, setActiveDocIndex] = useState(0);
   const [evaluationResult, setEvaluationResult] = useState<EvaluateResponse | null>(null);
   const [unlockResult, setUnlockResult] = useState<UnlockResponse | null>(null);
@@ -446,11 +457,6 @@ function GradeSubmissionWorkspace({ submission }: { submission: GradingSubmissio
               <span className="rounded-pill border-hairline border-dashed border-border-secondary bg-background-tertiary px-3 py-1 text-2xs text-foreground-tertiary">
                 Ứng viên #{getAnonymousCode(submission.hash_id)}
               </span>
-              {submission.data_source === 'mock' && (
-                <span className="rounded-pill border-hairline border-border-secondary bg-background px-3 py-1 text-2xs text-foreground-tertiary">
-                  Demo fallback
-                </span>
-              )}
             </div>
             <h1 className="truncate text-lg font-semibold text-foreground">
               {submission.challenge_title}
@@ -468,14 +474,23 @@ function GradeSubmissionWorkspace({ submission }: { submission: GradingSubmissio
               </p>
             </div>
             <div className="rounded-md border-hairline border-border bg-background px-3 py-2">
-              <p className="text-2xs uppercase text-foreground-tertiary">Tài liệu</p>
-              <p className="mt-0.5 font-mono text-sm text-foreground">
-                {submission.documents.length}
+              <p className="text-2xs uppercase text-foreground-tertiary">Hình thức</p>
+              <p className="mt-0.5 text-sm font-medium text-foreground">
+                {submission.submission_method === 'Text' ? 'Bài viết' : 'Tệp đính kèm'}
               </p>
             </div>
           </div>
         </div>
       </header>
+
+      <VerificationSummaryCard
+        summary={verificationSummary.data}
+        isLoading={verificationSummary.isLoading}
+        isError={verificationSummary.isError}
+        isUnlocked={isUnlocked}
+        onRetry={() => void verificationSummary.refetch()}
+        submissionId={submission.submission_id}
+      />
 
       {notice && (
         <p className="shrink-0 rounded-lg border-hairline border-[rgba(34,197,94,0.35)] bg-success-bg px-4 py-2 text-xs text-success">
@@ -500,15 +515,25 @@ function GradeSubmissionWorkspace({ submission }: { submission: GradingSubmissio
             </div>
           </div>
 
-          <DocumentsTabs
-            documents={submission.documents}
-            activeDocIndex={safeActiveDocIndex}
-            onChange={setActiveDocIndex}
-          />
-
-          <div className="min-h-0 flex-1">
-            <DocumentViewer document={activeDoc} />
-          </div>
+          {submission.submission_method === 'Text' ? (
+            <div className="min-h-0 flex-1">
+              <SubmissionContentViewer
+                content={submission.content}
+                format={submission.content_format}
+              />
+            </div>
+          ) : (
+            <>
+              <DocumentsTabs
+                documents={submission.documents}
+                activeDocIndex={safeActiveDocIndex}
+                onChange={setActiveDocIndex}
+              />
+              <div className="min-h-0 flex-1">
+                <DocumentViewer document={activeDoc} />
+              </div>
+            </>
+          )}
         </section>
 
         <aside className="flex min-h-[560px] flex-col gap-4 rounded-lg border-hairline border-border-secondary bg-background-secondary p-4 lg:min-h-0">

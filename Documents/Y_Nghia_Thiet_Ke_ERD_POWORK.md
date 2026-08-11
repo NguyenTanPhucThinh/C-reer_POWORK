@@ -41,16 +41,18 @@ Quản lý toàn bộ kho dữ liệu tĩnh liên quan đến đề bài do nhà
 
 - **Bảng Kín `Identity_Mappings`:**
   - Đây là bảng nhạy cảm nhất hệ thống, đóng vai trò làm cầu nối ẩn giữa thông tin thật và danh tính giả.
-  - Nó lưu trữ bộ ba: `hash_id` (Tên giả, VD: `Candidate_7A9B`), `user_id` (ID thật của ứng viên), và `challenge_id`.
+  - Nó lưu trữ bộ ba: `hash_id` (Tên giả 128-bit, VD: `Candidate_9F7A64D4297F45FA1E63B6A027AECE85`), `user_id` (ID thật của ứng viên), và `challenge_id`.
   - Trường `is_unlocked` (Boolean) mặc định là `False`. Khi doanh nghiệp chưa duyệt bài đạt, không một luồng logic nào từ phía client được phép truy cập vào bảng này để lấy ra `user_id`.
 - **Bảng Công khai `Submissions`:**
   - Khóa chính (PK) là `submission_id`. Bảng này **tuyệt đối không có cột `user_id`**. Danh tính ứng viên được nối với bảng kín thông qua chuỗi mã hóa `hash_id`.
   - Nhà tuyển dụng chỉ được phép tương tác với bảng này khi chấm điểm.
   - `solution_url` lưu trữ đường dẫn chứa mã nguồn, file thiết kế hoặc tài liệu giải pháp của ứng viên trên Cloud Storage.
+  - `file_status` tách riêng vòng đời an toàn: `AWAITING_UPLOAD`, `PENDING_SCAN`, `SAFE`, `REJECTED`, `SCAN_FAILED`. Chỉ file `SAFE` được đưa vào luồng Employer; lỗi scan luôn fail-closed.
   - Lưu trữ thêm trường `general_comment` để chứa nhận xét tổng quan của giám khảo lúc duyệt bài.
 - **Bảng `Evaluation_Results`:**
   - Lưu trữ điểm số chi tiết do giám khảo chấm dựa trên từng dòng tiêu chí (`criteria_id`).
   - Kết nối trực tiếp với `Submissions` qua khóa ngoại `submission_id`.
+  - Cặp `(submission_id, criteria_id)` là duy nhất: một Submission không thể có nhiều kết quả chấm hiệu lực cho cùng tiêu chí.
 - **Ranh giới cô lập:** **CẤM TUYỆT ĐỐI các câu lệnh JOIN** giữa bảng `Submissions`/`Evaluation_Results` sang bảng `Users` ở tầng cơ sở dữ liệu. Giám khảo và hệ thống giám sát chỉ được phép nhìn thấy mã `hash_id` ngẫu nhiên.
 
 ### 2.4 Profile Module (Hồ sơ năng lực động)
@@ -60,6 +62,7 @@ Xây dựng và hiển thị biểu đồ radar năng lực thực chiến công
 - **Bảng `Verified_Evidences`:**
   - Lưu trữ bằng chứng thực chiến của ứng viên sau khi đã vượt qua khâu đánh giá.
   - Bảng này lưu `user_id` để biết hồ sơ thuộc về ai. Tuy nhiên, nó áp dụng chiến lược **Snapshot Data**: copy trực tiếp chuỗi văn bản tĩnh như `challenge_name`, `company_name`, và `industry` tại thời điểm mở khóa để lưu trữ. Điều này phục vụ việc vẽ biểu đồ radar năng lực đa ngành.
+  - `source_hash_id` là khóa nguồn duy nhất của snapshot mới. Dữ liệu cũ được phép để `null`; mỗi anonymous identity chỉ có thể tạo một snapshot, kể cả khi hai request unlock chạy đồng thời.
 - **Ranh giới cô lập:** Profile Module không JOIN ngược về Challenge Module hay IAM Module để lấy tên bài toán hay tên công ty. Việc lưu trữ Snapshot giúp Profile Module hoàn toàn độc lập, đảm bảo tốc độ truy vấn hiển thị cực kỳ nhanh, đồng thời bảo vệ dữ liệu hồ sơ vĩnh viễn kể cả khi bài Challenge gốc bị doanh nghiệp xóa hoặc sửa đổi.
 
 ### 2.5 Talent Pool Module (Lưu trữ ứng viên)
@@ -69,6 +72,7 @@ Module mở rộng cho phép doanh nghiệp lưu lại danh sách các ứng vi�
 - **Bảng `Talent_Pools`:**
   - Lưu trữ `company_id` và `user_id` (của ứng viên).
   - Trường `status` (Enum: `IN_POOL`, `INVITED`, `CONSIDERING`) để theo dõi trạng thái tuyển dụng.
+  - Trước khi tạo bản ghi, Backend đối chiếu `Identity_Mappings.challenge_id` với Challenge thuộc `company_id` từ JWT. Candidate do công ty khác unlock không thể được thêm vào pool.
 - **Ranh giới cô lập:** Bảng này lưu trữ độc lập, tuân thủ nguyên tắc không sử dụng Khóa ngoại (FK) chéo sang IAM Module. `company_id` và `user_id` chỉ được lưu dưới dạng Data Field để đảm bảo sự lỏng lẻo (Loosely Coupling) giữa các service.
 
 ---
@@ -89,14 +93,14 @@ Toàn bộ các trường khóa chính (PK) và khóa quan hệ trong ERD này �
 
 1.  Ứng viên nhấn nút nộp bài. Frontend gửi HTTP Request kèm Token JWT của ứng viên và file bài làm.
 2.  Middleware của hệ thống giải mã JWT để lấy ra `user_id` thật.
-3.  Hệ thống chuyển giao gói tin vào **Assessment Module**. Tại đây, một thuật toán ngẫu nhiên lập tức sinh ra một mã băm định danh (VD: `hash_id = "Candidate_7A9B"`).
+3.  Hệ thống chuyển giao gói tin vào **Assessment Module**. Tại đây, HMAC-SHA256 sinh ra mã định danh 128-bit ổn định theo cặp Candidate–Challenge (VD: `hash_id = "Candidate_9F7A64D4297F45FA1E63B6A027AECE85"`).
 4.  Hệ thống thực hiện 2 thao tác Insert ghi nhận dữ liệu:
     - Ghi cặp quan hệ mật mã `[hash_id, user_id, challenge_id, is_unlocked = False]` vào bảng kín `Identity_Mappings`.
     - Ghi thông tin bài nộp vào bảng công khai `Submissions` với khóa chính là `submission_id` và chứa `hash_id` để nối danh tính (Hoàn toàn sạch bóng thông tin `user_id`).
 
 ### Luồng 2: Doanh nghiệp chấm điểm và mở khóa thông tin (Unlock)
 
-1.  Nhà tuyển dụng vào Dashboard, hệ thống thực hiện `SELECT * FROM Submissions WHERE challenge_id = :id`. Giao diện trả về danh sách bài nộp hiển thị dưới dạng mã ẩn danh (`Candidate_7A9B`). Nhà tuyển dụng xem file giải pháp và tiến hành chấm điểm theo Rubric, lưu kết quả vào bảng `Evaluation_Results`.
+1.  Nhà tuyển dụng vào Dashboard, hệ thống lấy các trường công khai của Submission theo `challenge_id`. Giao diện chỉ hiển thị mã ẩn danh (`Candidate_9F7A64D4297F45FA1E63B6A027AECE85`) và tên file trung tính. Nhà tuyển dụng xem file giải pháp và tiến hành chấm điểm theo Rubric, lưu kết quả vào bảng `Evaluation_Results`.
 2.  Nếu bài làm không đạt, nhà tuyển dụng bấm từ chối, trạng thái `Submissions.status` đổi thành `Rejected`. Bức tường ẩn danh giữ nguyên.
 3.  Nếu bài làm xuất sắc, nhà tuyển dụng bấm nút **"Duyệt & Mở khóa" (Approve & Unlock)**:
     - Hệ thống cập nhật `Submissions.status = 'Approved'`.

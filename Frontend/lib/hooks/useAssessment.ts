@@ -6,8 +6,25 @@ import type { EvaluateRequest, UnlockRequest } from '@/lib/types';
 export function useGradingSubmission(submissionId: string, challengeId?: string | null) {
   return useQuery({
     queryKey: ['assessment', 'grading-submission', submissionId, challengeId ?? null],
-    queryFn: () => getGradingSubmission({ submissionId, challengeId }),
+    queryFn: () => getGradingSubmission({ submissionId, challengeId: challengeId! }),
+    enabled: Boolean(submissionId && challengeId),
+  });
+}
+
+export function useVerificationSummary(submissionId: string) {
+  return useQuery({
+    queryKey: ['assessment', 'verification-summary', submissionId],
+    queryFn: () => assessmentAPI.getVerificationSummary(submissionId),
     enabled: Boolean(submissionId),
+  });
+}
+
+export function useVerificationDashboard(submissionId: string) {
+  return useQuery({
+    queryKey: ['assessment', 'verification-dashboard', submissionId],
+    queryFn: () => assessmentAPI.getVerificationDashboard(submissionId),
+    enabled: Boolean(submissionId),
+    retry: false,
   });
 }
 

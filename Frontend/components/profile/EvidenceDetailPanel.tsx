@@ -40,7 +40,7 @@ function SubmissionFileRow({ file }: { file: SubmissionFile }) {
           Open
         </a>
       ) : (
-        <span className="shrink-0 text-2xs text-foreground-tertiary">No URL</span>
+        <span className="shrink-0 text-2xs text-foreground-tertiary">Không có URL</span>
       )}
     </div>
   );
@@ -95,7 +95,7 @@ export function EvidenceDetailPanel({ evidence }: EvidenceDetailPanelProps) {
 
         <aside className="space-y-5">
           <section className="rounded-lg border-hairline border-border-secondary bg-background-secondary p-4">
-            <h2 className="mb-3 text-lg font-semibold text-foreground">Verified skills</h2>
+            <h2 className="mb-3 text-lg font-semibold text-foreground">Kỹ năng đã xác thực</h2>
             <div className="flex flex-wrap gap-2">
               {evidence.skills.map((skill) => (
                 <VerifiedSkillBadge key={skill.id} skill={skill} compact />

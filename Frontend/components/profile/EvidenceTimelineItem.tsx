@@ -5,9 +5,9 @@ import { formatDate } from '@/lib/utils/helpers';
 import { VerifiedSkillBadge } from './VerifiedSkillBadge';
 
 const statusLabels: Record<EvidenceStatus, string> = {
-  verified: 'Verified',
-  passed: 'Passed',
-  excellent: 'Excellent',
+  verified: 'Đã xác thực',
+  passed: 'Đã vượt',
+  excellent: 'Xuất sắc',
 };
 
 const statusVariants: Record<EvidenceStatus, 'open' | 'done' | 'invited'> = {
@@ -23,7 +23,7 @@ interface EvidenceTimelineItemProps {
 export function EvidenceTimelineItem({ evidence }: EvidenceTimelineItemProps) {
   const description =
     evidence.employerFeedback ??
-    `${evidence.challengeTitle} verified ${evidence.skills.length} skill signals.`;
+    `${evidence.challengeTitle} đã xác thực ${evidence.skills.length} tín hiệu kỹ năng.`;
 
   return (
     <article className="group relative rounded-[18px] border-hairline border-border-secondary bg-background-tertiary p-4  transition-all hover:border-accent ">
@@ -33,7 +33,7 @@ export function EvidenceTimelineItem({ evidence }: EvidenceTimelineItemProps) {
         <div className="min-w-0">
           <div className="mb-2 flex flex-wrap items-center gap-2">
             <span className="rounded-pill border-hairline border-border bg-background px-2 py-0.5 text-2xs font-medium text-foreground-secondary">
-              Challenge completed
+              Challenge đã hoàn thành
             </span>
             <Badge variant={statusVariants[evidence.status]}>{statusLabels[evidence.status]}</Badge>
             <span className="text-sm font-medium text-foreground-secondary">
@@ -52,7 +52,7 @@ export function EvidenceTimelineItem({ evidence }: EvidenceTimelineItemProps) {
         </div>
 
         <div className="shrink-0 rounded-[16px] border-hairline border-success bg-success-bg px-3 py-2 text-left md:text-right">
-          <p className="text-xs font-medium text-foreground-secondary">Career signal</p>
+          <p className="text-xs font-medium text-foreground-secondary">Tín hiệu sự nghiệp</p>
           <p className="text-2xl font-semibold leading-none text-success">
             {evidence.finalScore}
             <span className="text-sm text-foreground-secondary">/{evidence.maxScore}</span>
@@ -71,7 +71,7 @@ export function EvidenceTimelineItem({ evidence }: EvidenceTimelineItemProps) {
           href={`/candidate/profile/evidence/${evidence.id}`}
           className="inline-flex h-8 items-center rounded-pill border-hairline border-accent bg-accent-bg px-3 text-xs font-semibold text-accent transition-colors group-hover:border-accent group-hover:bg-accent-bg"
         >
-          Open event
+          Xem chi tiết
         </Link>
       </div>
     </article>

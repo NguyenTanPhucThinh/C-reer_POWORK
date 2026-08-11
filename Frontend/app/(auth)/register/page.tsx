@@ -19,7 +19,13 @@ export default function RegisterPage() {
     formState: { errors, isSubmitting },
   } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { full_name: '', email: '', password: '', role: 'Candidate' },
+    defaultValues: {
+      full_name: '',
+      email: '',
+      password: '',
+      role: 'Candidate',
+      company_name: '',
+    },
   });
 
   const selectedRole = useWatch({ control, name: 'role' });
@@ -68,6 +74,28 @@ export default function RegisterPage() {
             )}
           </div>
 
+          {selectedRole === 'Employer' && (
+            <div>
+              <label
+                htmlFor="companyName"
+                className="block text-base font-semibold text-foreground mb-1.5"
+              >
+                Tên công ty
+              </label>
+              <input
+                id="companyName"
+                type="text"
+                autoComplete="organization"
+                {...registerField('company_name')}
+                placeholder="Công ty TNHH ABC"
+                className="input-base !text-base h-11"
+              />
+              {errors.company_name && (
+                <p className="text-red-400 text-base mt-1">{errors.company_name.message}</p>
+              )}
+            </div>
+          )}
+
           <div>
             <label htmlFor="email" className="block text-base font-semibold text-foreground mb-1.5">
               Email
@@ -77,7 +105,7 @@ export default function RegisterPage() {
               type="text"
               autoComplete="email"
               {...registerField('email')}
-              placeholder="you@example.com"
+              placeholder="ban@email.com"
               className="input-base !text-base h-11"
             />
             {errors.email && <p className="text-red-400 text-base mt-1">{errors.email.message}</p>}
@@ -95,7 +123,7 @@ export default function RegisterPage() {
               type="password"
               autoComplete="new-password"
               {...registerField('password')}
-              placeholder="Tối thiểu 6 ký tự"
+              placeholder="Tối thiểu 8 ký tự"
               className="input-base !text-base h-11"
             />
             {errors.password && (
@@ -150,7 +178,7 @@ export default function RegisterPage() {
         {/* Tăng cỡ chữ dòng điều hướng ở cuối */}
         <p className="text-center text-foreground-secondary text-base mt-6">
           Đã có tài khoản?{' '}
-          <Link href="/" className="text-accent hover:underline font-semibold">
+          <Link href="/login" className="text-accent hover:underline font-semibold">
             Đăng nhập
           </Link>
         </p>

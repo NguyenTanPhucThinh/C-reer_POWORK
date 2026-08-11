@@ -24,8 +24,11 @@ Thay vì tải file xuống máy chủ Backend rồi mới quét (gây tràn ổ
 2. **Kích hoạt:** Sau khi nộp thành công, Backend tạo một Background Job.
 3. **Stream:** Backend mở luồng đọc từ MinIO và bơm trực tiếp luồng dữ liệu đó sang container của ClamAV qua giao thức TCP.
 4. **Phán quyết:** 
-   - `CLEAN` (Sạch): Đánh dấu `is_infected = false`. Giám khảo được phép xem và tải.
-   - `INFECTED` (Nhiễm độc): Đánh dấu `is_infected = true`. Khóa quyền tải file, hệ thống tự động gửi Email cảnh báo cho ứng viên.
+   - `CLEAN` (Sạch rõ ràng): chuyển `file_status = SAFE`. Giám khảo mới được phép xem và tải.
+   - `INFECTED` (Nhiễm độc): chuyển `file_status = REJECTED` và từ chối Submission.
+   - `ERROR/UNKNOWN`: chuyển `file_status = SCAN_FAILED`. Lỗi hoặc kết quả thiếu boolean tuyệt đối không được hiểu là CLEAN.
+
+Mọi truy vấn Employer chỉ lấy file `SAFE`. Các trạng thái `AWAITING_UPLOAD`, `PENDING_SCAN`, `REJECTED` và `SCAN_FAILED` luôn bị cách ly.
 
 ---
 

@@ -1,17 +1,18 @@
 /**
  * Error Handler tập trung
  * Format theo Coding Convention:
- *   { status: "error", error_code: "AUTH_001", message: "..." }
+ * { status: "error", error_code: "AUTH_001", message: "..." }
  */
 import { AppError } from '../utils/AppError.js'
 
-export const errorHandler = (err, req, res) => {
+export const errorHandler = (err, req, res, next) => {
   // Lỗi do dev throw AppError — có error_code
   if (err instanceof AppError) {
     return res.status(err.statusCode).json({
       status: 'error',
       error_code: err.errorCode ?? 'UNKNOWN',
       message: err.message,
+      ...(err.details && { details: err.details }),
       ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
     })
   }

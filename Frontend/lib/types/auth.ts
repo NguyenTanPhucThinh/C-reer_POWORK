@@ -5,6 +5,7 @@ export interface User {
   email: string;
   full_name: string;
   role: UserRole;
+  company_id?: string | null;
   avatar_url?: string;
   created_at?: string;
 }
@@ -20,6 +21,7 @@ export interface RegisterRequest {
   password: string;
   full_name: string;
   role: UserRole;
+  company_name?: string;
 }
 
 export interface AuthSession {
