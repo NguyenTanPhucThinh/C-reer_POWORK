@@ -30,6 +30,7 @@ export const NAV_BY_ROLE: Record<UserRole, NavItem[]> = {
   ],
   Employer: [
     { label: 'Tổng quan', href: '/employer/dashboard', icon: 'home' },
+    { label: 'Bài nộp', href: '/employer/submissions', icon: 'submission' },
     { label: 'Thử thách', href: '/challenges', icon: 'challenge' },
     { label: 'Tạo thử thách', href: '/employer/challenges/create', icon: 'create' },
     { label: 'Kho ứng viên', href: '/talent-pool', icon: 'talent' },

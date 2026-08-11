@@ -19,8 +19,8 @@ export const getProfileByUserId = async (userId) => {
 
   // Bước 3: Đóng gói và trả về Object thuần
   return {
-    userId: userContact.userId,
-    fullName: userContact.fullName,
+    userId: userContact.user_id,
+    fullName: userContact.full_name,
     verifiedEvidences: evidences,
   }
 }

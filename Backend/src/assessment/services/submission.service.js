@@ -22,7 +22,7 @@ import {
   isSubmissionObjectKey,
 } from './upload.service.js'
 import { queueScanJob } from '../jobs/scan.job.js'
-import { sendSubmissionConfirmationEmail } from './notification.service.js'
+import { sendSubmissionAcceptedEmail } from './notification.service.js'
 
 export const prepareSubmissionUpload = async ({ userId, challengeId, filename }) => {
   const challenge = await prisma.challenge.findUnique({ where: { id: challengeId } })
@@ -95,7 +95,7 @@ const sendConfirmation = ({ userId, submission, challengeTitle }) => {
   userLookupService
     .getUserById(userId)
     .then(({ email }) =>
-      sendSubmissionConfirmationEmail({
+      sendSubmissionAcceptedEmail({
         toEmail: email,
         hashId: submission.hashId,
         version: submission.version,
@@ -172,11 +172,9 @@ export const submitSolution = async ({
 
   queueScanJob(submission.id)
 
-  // 5. Gửi email xác nhận — KHÔNG await trong luồng chính (fire-and-forget),
-  //    lấy email qua IAM Interface, không lộ ra response cho FE
-  sendConfirmation({ userId, submission, challengeTitle })
+  // File chỉ được xác nhận qua email sau khi quét an toàn hoàn tất.
 
-  // 6. Trả dữ liệu nội bộ cho controller — TUYỆT ĐỐI không có userId
+  // Trả dữ liệu nội bộ cho controller — TUYỆT ĐỐI không có userId
   return {
     submissionId: submission.id,
     hashId: submission.hashId,
