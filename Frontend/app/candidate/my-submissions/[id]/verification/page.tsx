@@ -3,7 +3,7 @@
 import axios from 'axios';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useCallback, useEffect, useReducer, useRef } from 'react';
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { Badge, Button } from '@/components/ui';
 import { assessmentAPI } from '@/lib/api/endpoints';
 import {
@@ -479,6 +479,7 @@ function isAlreadyCompletedError(error: unknown): boolean {
 export default function CandidateVerificationPage() {
   const submissionId = getSubmissionId(useParams());
   const [state, dispatch] = useReducer(verificationReducer, initialState);
+  const [rulesAccepted, setRulesAccepted] = useState(false);
   const transitionLock = useRef(false);
   const lastFocusLossAt = useRef(0);
   const recorder = useVerificationRecorder();
@@ -691,7 +692,7 @@ export default function CandidateVerificationPage() {
   }, [resumeSession]);
 
   async function startSession() {
-    if (!submissionId || transitionLock.current) return;
+    if (!submissionId || !rulesAccepted || transitionLock.current) return;
 
     transitionLock.current = true;
     dispatch({ type: 'STARTING' });
@@ -1081,10 +1082,53 @@ export default function CandidateVerificationPage() {
               <p className="text-xs font-semibold uppercase tracking-wider text-accent">
                 Bước chuẩn bị
               </p>
-              <h2 className="mt-2 text-2xl font-semibold">Chọn thời lượng trình bày</h2>
+              <h2 className="mt-2 text-2xl font-semibold">Hướng dẫn trước khi xác thực</h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-foreground-secondary">
-                Lựa chọn sẽ được khóa sau khi phiên được tạo. Khi bấm bắt đầu, trình duyệt sẽ mở
-                toàn màn hình và kiểm tra quyền camera, microphone trước khi tạo phiên.
+                Hãy đọc kỹ để phiên xác thực diễn ra liền mạch. Sau khi bắt đầu, bạn sẽ lần lượt
+                hoàn thành đủ năm bước được hiển thị trên thanh tiến trình.
+              </p>
+
+              <ol className="mt-6 grid gap-3 text-sm leading-6 text-foreground-secondary sm:grid-cols-2">
+                {[
+                  [
+                    'Chuẩn bị thiết bị',
+                    'Ngồi ở nơi đủ sáng, giữ khuôn mặt trong khung hình và kiểm tra camera, microphone.',
+                  ],
+                  [
+                    'Trình bày qua camera',
+                    'Chọn thời lượng phù hợp, trình bày rõ ràng về bài làm và kết thúc trong thời gian đã chọn.',
+                  ],
+                  [
+                    'Trả lời câu hỏi',
+                    'Tự nhập câu trả lời bằng bàn phím; thao tác sao chép, dán, thả nội dung và chọn toàn bộ sẽ không được sử dụng.',
+                  ],
+                  [
+                    'Giữ phiên ổn định',
+                    'Duy trì toàn màn hình, không tải lại hoặc đóng trang cho đến khi hệ thống báo hoàn tất.',
+                  ],
+                  [
+                    'Gửi và chờ xác nhận',
+                    'Video và câu trả lời sẽ được gửi, kiểm tra an toàn rồi mới ghi nhận hoàn tất.',
+                  ],
+                ].map(([title, description], index) => (
+                  <li
+                    key={title}
+                    className="flex gap-3 rounded-xl border border-border bg-background p-4"
+                  >
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent-bg font-semibold text-accent">
+                      {index + 1}
+                    </span>
+                    <span>
+                      <strong className="block text-foreground">{title}</strong>
+                      <span className="mt-1 block">{description}</span>
+                    </span>
+                  </li>
+                ))}
+              </ol>
+
+              <h3 className="mt-7 text-lg font-semibold">Chọn thời lượng trình bày</h3>
+              <p className="mt-1 text-sm leading-6 text-foreground-secondary">
+                Lựa chọn này sẽ được khóa sau khi phiên được tạo.
               </p>
               <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {DURATION_OPTIONS.map((option) => {
@@ -1106,12 +1150,28 @@ export default function CandidateVerificationPage() {
                   );
                 })}
               </div>
+
+              <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-xl border border-accent/30 bg-accent-bg/60 p-4 text-sm leading-6 text-foreground-secondary">
+                <input
+                  type="checkbox"
+                  checked={rulesAccepted}
+                  onChange={(event) => setRulesAccepted(event.currentTarget.checked)}
+                  className="mt-1 h-4 w-4 shrink-0 accent-[var(--color-accent)]"
+                />
+                <span>
+                  <strong className="text-foreground">Tôi đã nắm rõ nội quy</strong>
+                  <span className="block">
+                    Tôi đã chuẩn bị thiết bị và đồng ý thực hiện phiên xác thực theo hướng dẫn trên.
+                  </span>
+                </span>
+              </label>
               <Button
                 type="button"
                 variant="primary"
                 size="lg"
                 className="mt-7 w-full sm:w-auto"
                 onClick={() => void startSession()}
+                disabled={!rulesAccepted}
               >
                 Bắt đầu phiên xác thực
               </Button>

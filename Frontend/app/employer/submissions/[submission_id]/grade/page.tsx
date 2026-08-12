@@ -392,7 +392,17 @@ function GradeSubmissionWorkspace({ submission }: { submission: GradingSubmissio
   const addToTalentPoolMutation = useAddToTalentPool(); // Instantiate hook
   const verificationSummary = useVerificationSummary(submission.submission_id);
   const [activeDocIndex, setActiveDocIndex] = useState(0);
-  const [evaluationResult, setEvaluationResult] = useState<EvaluateResponse | null>(null);
+  const [evaluationResult, setEvaluationResult] = useState<EvaluateResponse | null>(() =>
+    submission.evaluations.length > 0
+      ? {
+          submission_id: submission.submission_id,
+          evaluations: submission.evaluations,
+          general_comment: submission.general_comment,
+          total_score: submission.evaluations.reduce((sum, item) => sum + item.score, 0),
+          evaluated_at: submission.evaluated_at ?? submission.submitted_at ?? '',
+        }
+      : null
+  );
   const [unlockResult, setUnlockResult] = useState<UnlockResponse | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -448,7 +458,7 @@ function GradeSubmissionWorkspace({ submission }: { submission: GradingSubmissio
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-4 overflow-visible lg:h-[calc(100vh-7rem)] lg:min-h-0 lg:overflow-hidden">
+    <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-4">
       <header className="shrink-0 rounded-lg border-hairline border-border-secondary bg-background-secondary px-4 py-4">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
@@ -504,8 +514,8 @@ function GradeSubmissionWorkspace({ submission }: { submission: GradingSubmissio
         </p>
       )}
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-visible lg:grid-cols-[minmax(0,1.05fr)_minmax(390px,0.95fr)] lg:overflow-hidden">
-        <section className="flex min-h-[560px] flex-col gap-3 lg:min-h-0">
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(390px,0.95fr)]">
+        <section className="flex min-h-[560px] flex-col gap-3">
           <div className="flex shrink-0 items-center justify-between gap-3">
             <div>
               <h2 className="text-sm font-semibold text-foreground">Bài làm ứng viên</h2>
@@ -536,7 +546,7 @@ function GradeSubmissionWorkspace({ submission }: { submission: GradingSubmissio
           )}
         </section>
 
-        <aside className="flex min-h-[560px] flex-col gap-4 rounded-lg border-hairline border-border-secondary bg-background-secondary p-4 lg:min-h-0">
+        <aside className="flex min-h-[560px] flex-col gap-4 rounded-lg border-hairline border-border-secondary bg-background-secondary p-4">
           <div className="shrink-0">
             <div className="flex items-start justify-between gap-3">
               <h2 className="text-md font-semibold text-foreground">Bảng chấm điểm</h2>
@@ -551,6 +561,8 @@ function GradeSubmissionWorkspace({ submission }: { submission: GradingSubmissio
           <div className="min-h-0 flex-1">
             <RubricScoringForm
               criteria={submission.criteria}
+              initialEvaluations={submission.evaluations}
+              initialGeneralComment={submission.general_comment}
               onSubmit={handleEvaluate}
               isSubmitting={evaluateMutation.isPending}
               readOnly={!canEvaluate}

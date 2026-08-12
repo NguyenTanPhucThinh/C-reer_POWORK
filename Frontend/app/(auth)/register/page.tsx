@@ -25,6 +25,7 @@ export default function RegisterPage() {
       password: '',
       role: 'Candidate',
       company_name: '',
+      accepted_terms: false,
     },
   });
 
@@ -157,6 +158,38 @@ export default function RegisterPage() {
                 🏢 Nhà tuyển dụng
               </button>
             </div>
+          </div>
+
+          <div>
+            <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border-secondary bg-background-secondary px-4 py-3 text-sm leading-6 text-foreground-secondary">
+              <input
+                type="checkbox"
+                {...registerField('accepted_terms')}
+                className="mt-1 h-4 w-4 shrink-0 accent-[var(--color-accent)]"
+              />
+              <span>
+                Tôi đã đọc và đồng ý với{' '}
+                <Link
+                  href="/public-page/terms"
+                  target="_blank"
+                  className="font-semibold text-accent hover:underline"
+                >
+                  Điều khoản sử dụng
+                </Link>{' '}
+                và{' '}
+                <Link
+                  href="/public-page/security"
+                  target="_blank"
+                  className="font-semibold text-accent hover:underline"
+                >
+                  Chính sách bảo mật
+                </Link>
+                .
+              </span>
+            </label>
+            {errors.accepted_terms && (
+              <p className="mt-1 text-sm text-red-400">{errors.accepted_terms.message}</p>
+            )}
           </div>
 
           {error && (
