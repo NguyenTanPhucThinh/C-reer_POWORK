@@ -11,8 +11,18 @@ import {
   evaluateSubmissionSchema,
   unlockSubmissionSchema,
 } from '../src/assessment/models/submission.schema.js'
+import { registerSchema } from '../src/iam/models/auth.schema.js'
 
 test('public API accepts only the documented snake_case contracts', async () => {
+  const registration = {
+    email: 'candidate@example.com',
+    password: 'Test12345!',
+    full_name: 'POWORK Candidate',
+    role: 'Candidate',
+  }
+  assert.equal(registerSchema.safeParse(registration).success, false)
+  assert.equal(registerSchema.safeParse({ ...registration, accepted_terms: true }).success, true)
+
   assert.equal(
     createChallengeSchema.safeParse({
       title: 'API contract',

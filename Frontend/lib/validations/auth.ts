@@ -13,6 +13,9 @@ export const registerSchema = z
     password: z.string().min(8, 'Mật khẩu tối thiểu 8 ký tự'),
     role: z.enum(['Candidate', 'Employer']),
     company_name: z.string().trim().optional(),
+    accepted_terms: z.boolean().refine((accepted) => accepted, {
+      message: 'Bạn cần xác nhận Điều khoản sử dụng và Chính sách bảo mật',
+    }),
   })
   .superRefine((value, context) => {
     if (value.role === 'Employer' && !value.company_name) {

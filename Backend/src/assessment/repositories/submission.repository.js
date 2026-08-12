@@ -93,7 +93,17 @@ export const findSubmissionsByChallengeGroupedByHash = async (challengeId, datab
           solutionUrl: true,
           content: true,
           contentFormat: true,
+          generalComment: true,
           submittedAt: true,
+          evaluationResults: {
+            orderBy: { evaluatedAt: 'asc' },
+            select: {
+              criteriaId: true,
+              score: true,
+              comment: true,
+              evaluatedAt: true,
+            },
+          },
         },
       },
     },

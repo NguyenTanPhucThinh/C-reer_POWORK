@@ -46,6 +46,8 @@ test('Candidate verification shell is resumable and derives its phase from Backe
   assert.match(page, /motion-reduce:transition-none/);
   assert.match(page, /focus-visible:ring-2/);
   assert.match(page, /sm:min-h-56/);
+  assert.match(page, /rulesAccepted/);
+  assert.match(page, /disabled=\{!rulesAccepted\}/);
   assert.match(page, /Không xác định được bài nộp/);
   assert.doesNotMatch(page, /framer-motion|motion\/react/);
 

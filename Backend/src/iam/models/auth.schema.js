@@ -12,6 +12,9 @@ export const registerSchema = z.object({
     errorMap: () => ({ message: 'role phải là Candidate hoặc Employer' }),
   }),
   company_name: z.string().trim().optional(),
+  accepted_terms: z.literal(true, {
+    errorMap: () => ({ message: 'Bạn phải xác nhận Điều khoản sử dụng và Chính sách bảo mật' }),
+  }),
 })
 
 export const loginSchema = z.object({
