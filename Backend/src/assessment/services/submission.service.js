@@ -210,6 +210,13 @@ export const getSubmissionsByChallenge = async (challengeId, companyId, database
       solutionUrl: s.solutionUrl,
       content: s.content,
       contentFormat: s.contentFormat,
+      generalComment: s.generalComment,
+      evaluations: (s.evaluationResults ?? []).map((evaluation) => ({
+        criteriaId: evaluation.criteriaId,
+        score: evaluation.score,
+        comment: evaluation.comment,
+        evaluatedAt: evaluation.evaluatedAt.toISOString(),
+      })),
       submittedAt: s.submittedAt.toISOString(),
     })),
   }))

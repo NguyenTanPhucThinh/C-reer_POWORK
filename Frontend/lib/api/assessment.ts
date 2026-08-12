@@ -53,6 +53,9 @@ export async function getGradingSubmission({
     solution_url: selectedSubmission.solution_url,
     criteria: challenge.rubrics,
     documents: getDocumentsFromSummary(selectedSubmission),
+    evaluations: selectedSubmission.evaluations ?? [],
+    general_comment: selectedSubmission.general_comment ?? undefined,
+    evaluated_at: selectedSubmission.evaluations?.at(-1)?.evaluated_at,
     is_unlocked: submissionGroup.is_unlocked,
   };
 }

@@ -30,6 +30,56 @@ test('foreign challenge ID cannot list submissions', async () => {
   )
 })
 
+test('owning Employer receives persisted rubric scores when reopening a submission', async () => {
+  const evaluatedAt = new Date('2026-08-12T08:00:00.000Z')
+  const submittedAt = new Date('2026-08-12T07:00:00.000Z')
+  const challenge = { ...foreignChallenge, id: 'challenge-a', companyId: ownCompanyId }
+  const database = {
+    challenge: { findUnique: async () => challenge },
+    identityMapping: {
+      findMany: async () => [
+        {
+          hashId: 'anonymous-hash',
+          isUnlocked: false,
+          submissions: [
+            {
+              id: 'submission-a',
+              version: 1,
+              status: 'EVALUATED',
+              submissionMethod: 'TEXT',
+              fileStatus: null,
+              solutionUrl: null,
+              content: 'candidate answer',
+              contentFormat: 'MARKDOWN',
+              generalComment: 'Clear reasoning',
+              submittedAt,
+              evaluationResults: [
+                {
+                  criteriaId: 'criterion-a',
+                  score: 8,
+                  comment: 'Well supported',
+                  evaluatedAt,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  }
+
+  const [group] = await getSubmissionsByChallenge(challenge.id, ownCompanyId, database)
+  assert.deepEqual(group.submissions[0].evaluations, [
+    {
+      criteriaId: 'criterion-a',
+      score: 8,
+      comment: 'Well supported',
+      evaluatedAt: evaluatedAt.toISOString(),
+    },
+  ])
+  assert.equal(group.submissions[0].generalComment, 'Clear reasoning')
+})
+
 test('foreign submission ID cannot create evaluations or change status', async () => {
   const writes = []
   const transaction = {

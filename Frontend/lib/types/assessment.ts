@@ -36,6 +36,8 @@ export interface SubmissionVersion {
   file_status: FileScanStatus | null;
   solution_url: string | null;
   content: string | null;
+  general_comment?: string | null;
+  evaluations?: Array<EvaluationItemInput & { evaluated_at?: string }>;
   submitted_at: string;
 }
 
@@ -67,6 +69,9 @@ export interface GradingSubmission {
   content?: string | null;
   criteria: RubricCriteria[];
   documents: ReviewDocument[];
+  evaluations: EvaluationItemInput[];
+  general_comment?: string;
+  evaluated_at?: string;
   is_unlocked?: boolean;
   unlocked_candidate_profile?: UnlockedCandidateProfile;
 }

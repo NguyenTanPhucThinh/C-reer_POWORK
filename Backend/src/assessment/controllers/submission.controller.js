@@ -76,6 +76,13 @@ export const getSubmissionsByChallenge = async (req, res) => {
         file_status: submission.fileStatus ? fileStatusToApi[submission.fileStatus] : null,
         solution_url: submission.solutionUrl,
         content: submission.content,
+        general_comment: submission.generalComment,
+        evaluations: submission.evaluations.map((evaluation) => ({
+          criteria_id: evaluation.criteriaId,
+          score: evaluation.score,
+          comment: evaluation.comment,
+          evaluated_at: evaluation.evaluatedAt,
+        })),
         submitted_at: submission.submittedAt,
       })),
     })),
