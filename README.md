@@ -24,6 +24,39 @@
   <sub>VietFuture Awards 2026 · Hạng mục Các sản phẩm, ứng dụng công nghệ khác</sub>
 </p>
 
+## Lời cảm ơn
+
+Nhóm trân trọng cảm ơn **giảng viên hướng dẫn** đã đồng hành bằng những phản biện chuyên môn, giúp dự án nhìn rõ hơn các vấn đề về tính công bằng, khả năng xác minh và giá trị thực tế của quy trình tuyển dụng.
+
+Nhóm cũng trân trọng môi trường học tập và tinh thần đổi mới sáng tạo từ **Trường Đại học Khoa học Tự nhiên, ĐHQG-HCM** và **Trường Đại học Công nghệ Thông tin, ĐHQG-HCM**; đồng thời cảm ơn **Ban Tổ chức VietFuture Awards 2026** đã tạo nên một sân chơi để sinh viên đưa ý tưởng ra khỏi phạm vi bài tập, đối diện với những câu hỏi thật về người dùng, công nghệ và khả năng phát triển sản phẩm.
+
+<p align="center">
+  <a href="https://hcmus.edu.vn/" title="Trường Đại học Khoa học Tự nhiên, ĐHQG-HCM">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="./assets/acknowledgements/hcmus-white.png" />
+      <img src="./assets/acknowledgements/hcmus.png" height="110" alt="Logo Trường Đại học Khoa học Tự nhiên, ĐHQG-HCM" />
+    </picture>
+  </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://www.uit.edu.vn/" title="Trường Đại học Công nghệ Thông tin, ĐHQG-HCM">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="./assets/acknowledgements/uit-white.png" />
+      <img src="./assets/acknowledgements/uit.png" height="110" alt="Logo Trường Đại học Công nghệ Thông tin, ĐHQG-HCM" />
+    </picture>
+  </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://vietfuture.world/" title="VietFuture Awards 2026">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="./assets/acknowledgements/vietfuture-2026-white.png" />
+      <img src="./assets/acknowledgements/vietfuture-2026.png" height="110" alt="Logo VietFuture Awards 2026" />
+    </picture>
+  </a>
+</p>
+
+<p align="center">
+  <sub>Các biểu trưng ghi nhận môi trường đào tạo của thành viên và cuộc thi mà dự án tham gia.</sub>
+</p>
+
 ---
 
 Thông thường, nhà tuyển dụng nhìn thấy con người trước rồi mới quyết định có xem năng lực của họ hay không. POWORK đảo lại thứ tự đó.
@@ -45,7 +78,9 @@ Kết quả là một quy trình mà cả hai phía đều phải đưa ra bằn
 
 ## Luồng hoạt động
 
-![Sơ đồ luồng hoạt động của POWORK](./po_workflow.svg)
+![POWORK — Anonymous Hiring Workflow](./assets/diagrams/powork-anonymous-hiring-workflow-postgresql.png)
+
+<sub>Các nhãn hiệu Gemini, Cloudflare, ClamAV và PostgreSQL được sử dụng để nhận diện những công nghệ được tích hợp trong POWORK. Quyền đối với các nhãn hiệu thuộc về chủ sở hữu tương ứng; việc xuất hiện trong sơ đồ không hàm ý tài trợ, hợp tác hay chứng thực.</sub>
 
 1. Employer tạo Challenge và thiết lập Rubric chấm điểm.
 2. AI kiểm tra phạm vi Challenge trước khi cho phép phát hành.
@@ -167,9 +202,10 @@ Frontend ánh xạ dữ liệu `snake_case` và `camelCase` tại ranh giới AP
 .
 ├── Backend/             # Express API, Prisma schema, migrations và tests
 ├── Frontend/            # Next.js application và frontend tests
+├── assets/              # Hình ảnh và sơ đồ sử dụng trong tài liệu
 ├── docker-compose.yml   # Môi trường chạy tích hợp
 ├── .env.example         # Mẫu cấu hình toàn hệ thống
-├── po_workflow.svg      # Sơ đồ luồng sản phẩm
+├── po_workflow.svg      # Sơ đồ luồng phiên bản trước
 └── start.bat            # Lệnh khởi động nhanh trên Windows
 ```
 
@@ -320,39 +356,6 @@ npx prettier --check "**/*.{js,jsx,ts,tsx,json,md,css}"
 | Trương Minh Quang     | Backend Core            | Trường Đại học Khoa học Tự nhiên, ĐHQG-HCM   |
 | Mai Đăng Khoa         | Frontend Developer      | Trường Đại học Khoa học Tự nhiên, ĐHQG-HCM   |
 | Nguyễn Tấn Phúc Thịnh | DevOps / Infrastructure | Trường Đại học Công nghệ Thông tin, ĐHQG-HCM |
-
-## Lời cảm ơn
-
-POWORK được hình thành từ nỗ lực của năm thành viên, nhưng không được phát triển trong một khoảng trống. Nhóm trân trọng cảm ơn **giảng viên hướng dẫn** đã đồng hành bằng những phản biện chuyên môn, giúp dự án nhìn rõ hơn các vấn đề về tính công bằng, khả năng xác minh và giá trị thực tế của quy trình tuyển dụng.
-
-Nhóm cũng trân trọng môi trường học tập và tinh thần đổi mới sáng tạo từ **Trường Đại học Khoa học Tự nhiên, ĐHQG-HCM** và **Trường Đại học Công nghệ Thông tin, ĐHQG-HCM**; đồng thời cảm ơn **Ban Tổ chức VietFuture Awards 2026** đã tạo nên một sân chơi để sinh viên đưa ý tưởng ra khỏi phạm vi bài tập, đối diện với những câu hỏi thật về người dùng, công nghệ và khả năng phát triển sản phẩm.
-
-<p align="center">
-  <a href="https://hcmus.edu.vn/" title="Trường Đại học Khoa học Tự nhiên, ĐHQG-HCM">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="./assets/acknowledgements/hcmus-white.png" />
-      <img src="./assets/acknowledgements/hcmus.png" height="110" alt="Logo Trường Đại học Khoa học Tự nhiên, ĐHQG-HCM" />
-    </picture>
-  </a>
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="https://www.uit.edu.vn/" title="Trường Đại học Công nghệ Thông tin, ĐHQG-HCM">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="./assets/acknowledgements/uit-white.png" />
-      <img src="./assets/acknowledgements/uit.png" height="110" alt="Logo Trường Đại học Công nghệ Thông tin, ĐHQG-HCM" />
-    </picture>
-  </a>
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="https://vietfuture.world/" title="VietFuture Awards 2026">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="./assets/acknowledgements/vietfuture-2026-white.png" />
-      <img src="./assets/acknowledgements/vietfuture-2026.png" height="110" alt="Logo VietFuture Awards 2026" />
-    </picture>
-  </a>
-</p>
-
-<p align="center">
-  <sub>Các biểu trưng ghi nhận môi trường đào tạo của thành viên và cuộc thi mà dự án tham gia.</sub>
-</p>
 
 ## Trạng thái dự án
 
