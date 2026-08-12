@@ -22,6 +22,7 @@ export interface RegisterRequest {
   full_name: string;
   role: UserRole;
   company_name?: string;
+  accepted_terms: boolean;
 }
 
 export interface AuthSession {
