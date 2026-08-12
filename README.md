@@ -222,7 +222,6 @@ Frontend ánh xạ dữ liệu `snake_case` và `camelCase` tại ranh giới AP
 
 ```bash
 git clone <repository-url>
-cd "Project Github"
 ```
 
 ### 2. Tạo file cấu hình
