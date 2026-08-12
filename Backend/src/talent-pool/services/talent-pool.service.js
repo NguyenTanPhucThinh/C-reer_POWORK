@@ -16,6 +16,8 @@ import { AppError } from '../../shared/utils/AppError.js'
 import * as userLookupService from '../../iam/services/user-lookup.service.js'
 import * as evidenceLookupService from '../../profile/services/evidence-lookup.service.js'
 import * as unlockLookupService from '../../assessment/services/unlock-lookup.service.js'
+import * as companyService from '../../iam/services/company.service.js'
+import { sendInterviewInvitationEmail } from './notification.service.js'
 
 // ─── POST /api/v1/talent-pool ─────────────────────────────────────────────────
 // companyId lấy từ JWT (token Employer), không nhận từ FE
@@ -100,10 +102,18 @@ export const getTalentPool = async ({ companyId }) => {
 }
 
 // ─── PATCH /api/v1/talent-pool/:pool_id/status ────────────────────────────────
-export const updateStatus = async ({ poolId, companyId, status }) => {
+export const updateStatus = async (
+  { poolId, companyId, status },
+  {
+    database = prisma,
+    getUserById = userLookupService.getUserById,
+    getCompanyById = companyService.getCompanyById,
+    notifyInterview = sendInterviewInvitationEmail,
+  } = {},
+) => {
   // Kiểm tra xem pool record này có tồn tại và thuộc về companyId hiện tại không
   // Việc check companyId rất quan trọng để tránh lỗi bảo mật (Employer A đổi status của Employer B)
-  const existing = await prisma.talentPool.findFirst({
+  const existing = await database.talentPool.findFirst({
     where: { id: poolId, companyId },
   })
 
@@ -111,11 +121,27 @@ export const updateStatus = async ({ poolId, companyId, status }) => {
     throw new AppError('Không tìm thấy ứng viên trong Talent Pool của bạn', 404, 'POOL_006')
   }
 
-  // Thực hiện cập nhật trạng thái
-  await prisma.talentPool.update({
-    where: { id: poolId },
+  // Compare-and-set để hai request INVITED đồng thời chỉ có một request gửi email.
+  const updated = await database.talentPool.updateMany({
+    where: { id: poolId, companyId, status: { not: status } },
     data: { status },
   })
+
+  if (updated.count === 1 && status === 'INVITED') {
+    try {
+      const [candidate, company] = await Promise.all([
+        getUserById(existing.userId),
+        getCompanyById(companyId),
+      ])
+      await notifyInterview({
+        toEmail: candidate.email,
+        candidateName: candidate.full_name,
+        companyName: company.company_name,
+      })
+    } catch (error) {
+      console.error('[TalentPool] Không gửi được thông báo mời phỏng vấn:', error.message)
+    }
+  }
 
   return null
 }

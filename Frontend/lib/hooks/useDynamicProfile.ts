@@ -6,6 +6,10 @@ export function useCandidateProfile(userId: string) {
     queryKey: ['candidate-profile', userId],
     queryFn: () => dynamicProfileAPI.getCandidateProfile(userId),
     enabled: Boolean(userId),
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchInterval: 30_000,
   });
 }
 

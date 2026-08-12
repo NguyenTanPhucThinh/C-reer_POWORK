@@ -21,3 +21,15 @@ export const getCompanyByUserId = async (userId) => {
     company_name: company.companyName,
   }
 }
+
+// Lấy company info từ companyId — dùng cho giao tiếp nội bộ giữa các module.
+export const getCompanyById = async (companyId) => {
+  const company = await prisma.company.findUnique({ where: { id: companyId } })
+  if (!company) {
+    throw new AppError('Không tìm thấy thông tin doanh nghiệp', 404, 'AUTH_009')
+  }
+  return {
+    company_id: company.id,
+    company_name: company.companyName,
+  }
+}
