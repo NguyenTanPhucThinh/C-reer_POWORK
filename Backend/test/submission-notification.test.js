@@ -19,6 +19,12 @@ test('accepted email thanks the Candidate and reinforces anonymous evaluation', 
   assert.match(email.text, /Cảm ơn bạn/)
   assert.match(email.text, /đánh giá ẩn danh/)
   assert.match(email.text, /Candidate_ABC/)
+  assert.match(email.html, /letter-spacing:6px[^>]*>POWORK</)
+  assert.match(email.html, /Blind Audition Platform/)
+  assert.match(email.html, /Xác nhận bài nộp/)
+  assert.match(email.html, /Thử thách/)
+  assert.match(email.html, /Mã ẩn danh/)
+  assert.match(email.html, /Phiên bản/)
 })
 
 test('rejected email gives a clear reason and a useful next action', () => {
@@ -31,6 +37,8 @@ test('rejected email gives a clear reason and a useful next action', () => {
   assert.match(email.subject, /chưa được chấp nhận/i)
   assert.match(email.text, /Lý do: Tệp chứa nội dung không an toàn/)
   assert.match(email.text, /nộp một phiên bản mới/)
+  assert.match(email.html, /Cập nhật bài nộp/)
+  assert.match(email.html, /<strong[^>]*>Lý do<\/strong>Tệp chứa nội dung không an toàn/)
 })
 
 test('notification resolves the Candidate internally and escapes untrusted HTML', async () => {
